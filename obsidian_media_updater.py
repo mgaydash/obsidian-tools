@@ -261,6 +261,9 @@ rating:
             print(f"❌ Could not determine release year")
             return False
         
+        # Sanitize title for filesystem (remove colons and other problematic characters)
+        proper_title = proper_title.replace(':', ' -').replace('/', '-').replace('\\', '-')
+        
         # Generate new filename
         new_filename = f"{proper_title} ({year}).md"
         new_path = file_path.parent / new_filename
