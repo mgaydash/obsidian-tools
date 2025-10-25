@@ -198,12 +198,6 @@ class ObsidianMediaUpdater:
         
         # Format the content
         content = f"""
----
-tags:
-  - entertainment
-rating:
----
-
 ## Links
 {imdb_link}
 
