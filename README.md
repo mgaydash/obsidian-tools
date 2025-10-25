@@ -210,6 +210,98 @@ Processing: Breaking Bad
 ✅ Done!
 ```
 
+## Fixing Broken Wikilinks
+
+After renaming your files with `obsidian_media_updater.py`, any wikilinks in other notes that referenced the old file names (without years) will be broken. Use `fix_wikilinks.py` to automatically update these links.
+
+### What It Does
+
+The wikilink fixer:
+- Scans your vault for files in "Title (Year)" format
+- Finds wikilinks that point to old names (e.g., `[[The Matrix]]`)
+- Updates them to the new format (e.g., `[[The Matrix (1999)]]`)
+- Preserves aliases (e.g., `[[The Matrix|great movie]]` becomes `[[The Matrix (1999)|great movie]]`)
+- Handles disambiguation when multiple years exist for the same title
+
+### Usage
+
+```bash
+python fix_wikilinks.py <vault_path> <backup_filename> [--non-interactive]
+```
+
+### Example
+
+```bash
+python fix_wikilinks.py ~/Documents/ObsidianVault wikilink_backup.zip
+```
+
+### Interactive Mode (Default)
+
+When the script finds a link that could point to multiple files (e.g., both "The Office (2001)" and "The Office (2005)" exist), it will prompt you to choose:
+
+```
+🔗 Multiple files match the link target 'The Office':
+--------------------------------------------------------------------------------
+1. The Office (2005)
+2. The Office (2001)
+3. Keep original (don't update this link)
+--------------------------------------------------------------------------------
+Select the correct file (or keep original):
+```
+
+### Non-Interactive Mode
+
+Use `--non-interactive` to skip ambiguous links instead of prompting:
+
+```bash
+python fix_wikilinks.py ~/Documents/ObsidianVault wikilink_backup.zip --non-interactive
+```
+
+### Example Session
+
+```
+🔗 Obsidian Wikilink Fixer
+================================================================================
+Vault: /Users/me/Documents/Vault
+Backup: wikilink_backup.zip
+Mode: Interactive
+================================================================================
+Creating backup: wikilink_backup.zip
+✓ Backup created successfully
+
+🔍 Building file mapping...
+✓ Found 5 base title(s) with year versions
+
+🔍 Scanning 42 markdown files...
+--------------------------------------------------------------------------------
+✓ Movie Reviews.md: Updated 3 link(s)
+✓ Favorites.md: Updated 1 link(s)
+✓ 2024 Watchlist.md: Updated 2 link(s)
+
+================================================================================
+📊 SUMMARY
+================================================================================
+Files scanned: 42
+Files with updates: 3
+Links updated: 6
+
+✅ Done!
+```
+
+## Recommended Workflow
+
+1. **First**, run the media updater to rename files and add metadata:
+   ```bash
+   python obsidian_media_updater.py ~/Documents/Vault media_backup.zip
+   ```
+
+2. **Then**, run the wikilink fixer to update all references:
+   ```bash
+   python fix_wikilinks.py ~/Documents/Vault wikilink_backup.zip
+   ```
+
+This ensures all your files are properly renamed AND all links throughout your vault are updated to point to the new file names.
+
 ## License
 
 Free to use and modify as needed.
