@@ -4,7 +4,7 @@ Automatically finds movie and series notes in your Obsidian vault, renames them 
 
 ## Features
 
-- 🔍 Finds all notes tagged with `entertainment`, `movie`, or `series`
+- 🔍 Finds all notes tagged with `movie` or `series`
 - 🎬 Fetches accurate data from TMDB
 - 📝 Renames files to "Title (Year)" format
 - 📋 Appends formatted metadata including:
@@ -63,7 +63,7 @@ python obsidian_media_updater.py ~/Documents/ObsidianVault backup_2024-10-24.zip
 ### 1. Finding Files
 
 The script searches for markdown files that:
-- Are tagged with `entertainment`, `movie`, or `series` (either in YAML frontmatter or hashtag format)
+- Are tagged with `movie` or `series` (either in YAML frontmatter or hashtag format)
 - Are NOT already in "Title (Year)" format
 
 **Examples of tags it recognizes:**
@@ -72,14 +72,13 @@ YAML format:
 ```yaml
 ---
 tags:
-  - entertainment
   - movie
 ---
 ```
 
 Hashtag format:
 ```markdown
-#entertainment #movie
+#movie
 ```
 
 ### 2. Disambiguation
