@@ -113,12 +113,6 @@ The Shawshank Redemption (1994).md
 
 With appended content:
 ```markdown
----
-tags:
-  - entertainment
-rating:
----
-
 ## Links
 https://www.imdb.com/title/tt0111161
 
@@ -127,15 +121,6 @@ Two imprisoned men bond over a number of years, finding solace and eventual rede
 ```
 
 ## What Gets Added
-
-### YAML Frontmatter
-```yaml
----
-tags:
-  - entertainment
-rating:
----
-```
 
 ### IMDB Link
 Clean IMDB URL without query parameters
