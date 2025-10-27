@@ -1,6 +1,6 @@
 # Obsidian Media File Updater
 
-Automatically finds movie and series notes in your Obsidian vault, renames them with release years, and appends rich metadata from TMDB (The Movie Database).
+I use Obsidian to track movies, series, and other enterainment, but my vault was unfortunately poorly organized, and it was sometimes unclear what movie or show a file was identifying. To discretely identify the movie and series, this tool renames them with release years, and appends rich metadata from TMDB (The Movie Database).
 
 ## Features
 
