@@ -290,7 +290,7 @@ class MoviePosterDownloader:
         print(f"✓ Poster saved: {poster_filename}")
 
         # Update frontmatter with wikilink
-        poster_wikilink = f"![[{poster_filename}]]"
+        poster_wikilink = f"[[{poster_filename}]]"
         if not self.update_frontmatter_with_poster(file_path, poster_wikilink):
             return False
 
