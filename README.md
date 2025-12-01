@@ -11,6 +11,7 @@ I use Obsidian to track movies, series, and other enterainment, but my vault was
   - IMDB link
   - Synopsis with director/creator and top 3 actors
   - Obsidian wikilinks for cast/crew
+- 🖼️ Downloads and embeds movie posters from TMDB
 - 💾 Creates a backup before making changes
 - 🎯 Smart disambiguation when multiple matches are found
 
@@ -157,11 +158,84 @@ Make sure you've exported the environment variable in your current terminal sess
 ### "Target file already exists"
 Another file with the same "Title (Year)" format already exists. You'll be prompted whether to overwrite.
 
+## Downloading Movie Posters
+
+After organizing your movie files, you can download and embed posters from TMDB using `download_movie_posters.py`.
+
+### What It Does
+
+The poster downloader:
+- Finds all markdown files tagged with `movie`
+- Skips files that already have a `poster` property in their YAML frontmatter
+- Downloads the movie poster from TMDB
+- Resizes the poster to a specified width (default: 200px, maintaining aspect ratio)
+- Converts the poster to JPEG format if needed
+- Saves the poster with the same base filename as the markdown file
+- Updates the markdown file's YAML frontmatter with a wikilink to the poster image
+
+### Usage
+
+```bash
+python download_movie_posters.py <vault_path> <backup_filename> [--width WIDTH]
+```
+
+### Examples
+
+```bash
+# Download posters at default 200px width
+python download_movie_posters.py ~/Documents/ObsidianVault poster_backup.zip
+
+# Download posters at custom 300px width
+python download_movie_posters.py ~/Documents/ObsidianVault poster_backup.zip --width 300
+```
+
+### How It Works
+
+1. **Finding Files**: Searches for markdown files tagged with `movie` that don't already have a poster
+2. **Searching TMDB**: If the filename includes a year (e.g., "Inception (2010).md"), it uses that to filter results
+3. **Disambiguation**: If multiple matches are found, prompts you to select the correct movie
+4. **Processing**: Downloads the poster, resizes it, converts to JPEG, and saves it next to the markdown file
+5. **Updating Frontmatter**: Adds a `poster: ![[filename.jpg]]` property to the YAML frontmatter
+
+### Example Transformation
+
+**Before:**
+```yaml
+---
+tags:
+  - movie
+---
+```
+
+**After:**
+```yaml
+---
+tags:
+  - movie
+poster: ![[Inception (2010).jpg]]
+---
+```
+
+The poster image `Inception (2010).jpg` will be saved in the same directory as the markdown file.
+
+### Options
+
+- `--width WIDTH`: Set the poster width in pixels (default: 200, range: 50-2000)
+
+### Notes
+
+- Only processes files tagged with `movie` (not `series`)
+- Skips files that already have a `poster` property in frontmatter
+- Posters are always converted to JPEG format for consistency
+- Maintains aspect ratio when resizing
+- Requires the same TMDB API key as the media updater
+
 ## Requirements
 
 - Python 3.7+
 - requests
 - PyYAML
+- Pillow
 
 ## Notes
 
@@ -295,12 +369,17 @@ Links updated: 6
    python obsidian_media_updater.py ~/Documents/Vault media_backup.zip
    ```
 
-2. **Then**, run the wikilink fixer to update all references:
+2. **Second**, run the wikilink fixer to update all references:
    ```bash
    python fix_wikilinks.py ~/Documents/Vault wikilink_backup.zip
    ```
 
-This ensures all your files are properly renamed AND all links throughout your vault are updated to point to the new file names.
+3. **Third**, run the poster downloader to add movie posters:
+   ```bash
+   python download_movie_posters.py ~/Documents/Vault poster_backup.zip
+   ```
+
+This ensures all your files are properly renamed, all links throughout your vault are updated, and movie posters are embedded in your notes.
 
 ## License
 
