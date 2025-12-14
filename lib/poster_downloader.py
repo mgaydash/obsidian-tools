@@ -1,12 +1,12 @@
 """Poster downloader for Obsidian media notes."""
 
-import re
 import requests
 import yaml
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from PIL import Image
 from io import BytesIO
+from .obsidian_utils import extract_title_and_year, filter_results_by_year
 
 
 class PosterDownloader:
@@ -119,14 +119,6 @@ class PosterDownloader:
             print(f"✓ Found: {md_file.name} [{media_type.upper()}]")
 
         return media_files
-
-    def extract_title_and_year(self, filename: str) -> Tuple[str, Optional[str]]:
-        """Extract title and year from filename in 'Title (Year)' format."""
-        match = re.match(r'(.+?)\s*\((\d{4})\)\.md$', filename)
-        if match:
-            return match.group(1).strip(), match.group(2)
-        else:
-            return filename.replace('.md', '').strip(), None
 
     def search_tmdb(self, title: str, media_type: str) -> List[Dict]:
         """
@@ -273,14 +265,18 @@ class PosterDownloader:
         Returns:
             True if successful, False if skipped or failed
         """
-        filename = file_path.name
-        title, year = self.extract_title_and_year(filename)
+        # Extract title and year from filename (remove .md extension first)
+        filename_without_ext = file_path.name.replace('.md', '')
+        title, year = extract_title_and_year(filename_without_ext)
 
         print(f"\n{'='*80}")
-        print(f"Processing: {title}" + (f" ({year})" if year else ""))
+        print(f"Processing: {file_path.name}")
         print(f"{'='*80}")
 
-        # Search TMDB
+        if year:
+            print(f"📅 Detected year: {year} - will use for auto-disambiguation")
+
+        # Search TMDB (without year in query)
         try:
             results = self.search_tmdb(title, media_type)
         except Exception as e:
@@ -291,21 +287,14 @@ class PosterDownloader:
             print(f"❌ No results found for '{title}'")
             return False
 
-        # Filter by year if we have it
+        # Filter by year if provided
         if year:
-            year_filtered = []
-            for r in results:
-                result_year = None
-                if 'release_date' in r and r['release_date']:
-                    result_year = r['release_date'][:4]
-                elif 'first_air_date' in r and r['first_air_date']:
-                    result_year = r['first_air_date'][:4]
-
-                if result_year == year:
-                    year_filtered.append(r)
-
+            year_filtered = filter_results_by_year(results, year, media_type)
             if year_filtered:
                 results = year_filtered
+                print(f"✓ Filtered to {len(results)} result(s) matching year {year}")
+            else:
+                print(f"⚠️  No results found for year {year}, showing all results")
 
         # Handle disambiguation
         if len(results) > 1:
@@ -315,6 +304,8 @@ class PosterDownloader:
                 return False
         else:
             selected = results[0]
+            if year:
+                print(f"✓ Auto-selected the only result matching year {year}")
 
         # Check if poster is available
         poster_path = selected.get('poster_path')
