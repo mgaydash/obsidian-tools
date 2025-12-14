@@ -120,13 +120,27 @@ class TMDBClient(MediaAPIClient):
             creator_text = format_wikilink(creators[0]['name']) if creators else "Unknown"
             description = f"{overview} Created by {creator_text}. Starring {cast_text}."
 
-        # Determine tag
-        tag = 'movie' if self.media_type == 'movie' else 'series'
+        # Build tags list
+        tags = []
+
+        # Add media type tag
+        media_tag = 'movie' if self.media_type == 'movie' else 'series'
+        tags.append(media_tag)
+
+        # Add genre tags
+        genres = details.get('genres', [])
+        for genre in genres:
+            genre_name = genre.get('name', '').lower()
+            if genre_name:
+                tags.append(genre_name)
+
+        # Format tags for YAML
+        tags_yaml = '\n'.join([f'  - {tag}' for tag in tags])
 
         # Format the content
         content = f"""---
 tags:
-  - {tag}
+{tags_yaml}
 ---
 
 ## Links
