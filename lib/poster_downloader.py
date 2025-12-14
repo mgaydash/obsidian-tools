@@ -329,5 +329,5 @@ class PosterDownloader:
             return False
 
         print(f"✓ Frontmatter updated with poster wikilink")
-        print(f"✓ Successfully processed: {filename}")
+        print(f"✓ Successfully processed: {file_path.name}")
         return True
