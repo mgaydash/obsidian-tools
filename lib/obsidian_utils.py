@@ -88,3 +88,37 @@ def filter_results_by_year(results: List[Dict], year: str, media_type: str) -> L
             filtered.append(result)
 
     return filtered
+
+
+def find_exact_title_match(results: List[Dict], title: str, media_type: str) -> Optional[Dict]:
+    """
+    Find an exact title match in results.
+
+    Args:
+        results: List of API search results
+        title: Title to match (case-insensitive)
+        media_type: 'movie', 'tv', 'series', or 'game'
+
+    Returns:
+        The result if exactly one exact match is found, None otherwise
+    """
+    exact_matches = []
+    title_lower = title.lower().strip()
+
+    for result in results:
+        result_title = None
+
+        if media_type in ['movie', 'tv', 'series']:
+            # TMDB format: movies use 'title', TV uses 'name'
+            result_title = result.get('title') or result.get('name')
+        elif media_type == 'game':
+            # IGDB format: uses 'name'
+            result_title = result.get('name')
+
+        if result_title and result_title.lower().strip() == title_lower:
+            exact_matches.append(result)
+
+    # Only return if exactly one exact match found
+    if len(exact_matches) == 1:
+        return exact_matches[0]
+    return None

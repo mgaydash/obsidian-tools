@@ -13,7 +13,7 @@ from typing import Set
 from lib.backup import create_vault_backup
 from lib.api import MediaAPIFactory
 from lib.poster_downloader import PosterDownloader
-from lib.obsidian_utils import extract_title_and_year, filter_results_by_year
+from lib.obsidian_utils import extract_title_and_year, filter_results_by_year, find_exact_title_match
 
 
 def read_titles_from_stdin() -> list[str]:
@@ -90,8 +90,13 @@ def process_title(client, vault_path: Path, title_input: str, media_type: str) -
         else:
             print(f"⚠️  No results found for year {year}, showing all results")
 
+    # Check for exact title match
+    exact_match = find_exact_title_match(results, title, media_type)
+    if exact_match:
+        print(f"✓ Auto-selected exact title match")
+        selected = exact_match
     # Handle disambiguation
-    if len(results) > 1:
+    elif len(results) > 1:
         selected = client.prompt_disambiguation(title, results)
         if selected is None:
             print("⊘ Skipped by user")

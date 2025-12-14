@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from PIL import Image
 from io import BytesIO
-from .obsidian_utils import extract_title_and_year, filter_results_by_year
+from .obsidian_utils import extract_title_and_year, filter_results_by_year, find_exact_title_match
 
 
 class PosterDownloader:
@@ -296,8 +296,13 @@ class PosterDownloader:
             else:
                 print(f"⚠️  No results found for year {year}, showing all results")
 
+        # Check for exact title match
+        exact_match = find_exact_title_match(results, title, media_type)
+        if exact_match:
+            print(f"✓ Auto-selected exact title match")
+            selected = exact_match
         # Handle disambiguation
-        if len(results) > 1:
+        elif len(results) > 1:
             selected = self.prompt_disambiguation(title, results, media_type)
             if selected is None:
                 print("⊘ Skipped by user")
