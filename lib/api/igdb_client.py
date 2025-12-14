@@ -1,0 +1,151 @@
+"""IGDB API client for games."""
+
+from typing import List, Dict, Optional
+from igdb.wrapper import IGDBWrapper
+from .base import MediaAPIClient
+from ..obsidian_utils import sanitize_filename, format_wikilink
+
+
+class IGDBClient(MediaAPIClient):
+    """IGDB API client implementation."""
+
+    def __init__(self, client_id: str, access_token: str):
+        """
+        Initialize IGDB client.
+
+        Args:
+            client_id: Twitch application client ID
+            access_token: Twitch OAuth access token
+        """
+        self.wrapper = IGDBWrapper(client_id, access_token)
+
+    def search(self, title: str) -> List[Dict]:
+        """Search IGDB for a game title."""
+        # IGDB uses Apicalypse query language
+        query = f'''
+            search "{title}";
+            fields name, first_release_date, summary, url, involved_companies;
+            limit 10;
+        '''
+
+        byte_array = self.wrapper.api_request('games', query)
+        results = eval(byte_array.decode('utf-8'))
+
+        return results if isinstance(results, list) else []
+
+    def get_details(self, media_id: str) -> Dict:
+        """Get detailed information from IGDB."""
+        # Get game details with expanded company information
+        query = f'''
+            fields name, first_release_date, summary, url, involved_companies.company.name,
+                   involved_companies.developer, involved_companies.publisher;
+            where id = {media_id};
+        '''
+
+        byte_array = self.wrapper.api_request('games', query)
+        results = eval(byte_array.decode('utf-8'))
+
+        if not results or not isinstance(results, list):
+            raise ValueError(f"Game with ID {media_id} not found")
+
+        return results[0]
+
+    def prompt_disambiguation(self, title: str, results: List[Dict]) -> Optional[Dict]:
+        """Show results and prompt user to select the correct one."""
+        print(f"\n🎮 Multiple results found for '{title}':")
+        print("-" * 80)
+
+        for idx, result in enumerate(results, 1):
+            name = result.get('name', 'Unknown')
+            year = ''
+
+            # Convert Unix timestamp to year
+            if 'first_release_date' in result:
+                from datetime import datetime
+                timestamp = result['first_release_date']
+                year = datetime.fromtimestamp(timestamp).year
+
+            summary = result.get('summary', 'No description available')[:100]
+
+            print(f"{idx}. {name} ({year}) [GAME]")
+            print(f"   {summary}...")
+            print()
+
+        print("0. Skip this file")
+        print("-" * 80)
+
+        while True:
+            try:
+                choice = input("Select the correct match (0 to skip): ").strip()
+                choice_num = int(choice)
+
+                if choice_num == 0:
+                    return None
+                if 1 <= choice_num <= len(results):
+                    return results[choice_num - 1]
+                else:
+                    print(f"Please enter a number between 0 and {len(results)}")
+            except ValueError:
+                print("Please enter a valid number")
+
+    def format_note_content(self, details: Dict) -> str:
+        """Generate markdown content for the note."""
+        # Get IGDB URL
+        igdb_url = details.get('url', 'Not available')
+
+        # Get summary
+        summary = details.get('summary', 'No description available.')
+
+        # Get developers and publishers
+        involved_companies = details.get('involved_companies', [])
+        developers = []
+        publishers = []
+
+        for ic in involved_companies:
+            company_name = ic.get('company', {}).get('name', 'Unknown')
+            if ic.get('developer'):
+                developers.append(company_name)
+            if ic.get('publisher'):
+                publishers.append(company_name)
+
+        # Format developer/publisher text
+        dev_text = format_wikilink(developers[0]) if developers else "Unknown"
+        pub_text = format_wikilink(publishers[0]) if publishers else "Unknown"
+
+        # Build description
+        description = f"{summary} Developed by {dev_text}. Published by {pub_text}."
+
+        # Format the content
+        content = f"""---
+tags:
+  - game
+---
+
+## Links
+{igdb_url}
+
+## Description
+{description}
+"""
+        return content
+
+    def get_filename(self, details: Dict) -> str:
+        """Generate filename in 'Title (Year).md' format."""
+        # Get the year
+        year = ''
+        if 'first_release_date' in details:
+            from datetime import datetime
+            timestamp = details['first_release_date']
+            year = str(datetime.fromtimestamp(timestamp).year)
+
+        if not year:
+            raise ValueError("Could not determine release year")
+
+        # Get title
+        title = details.get('name', 'Unknown')
+
+        # Sanitize title for filesystem
+        title = sanitize_filename(title)
+
+        # Generate filename
+        return f"{title} ({year}).md"
