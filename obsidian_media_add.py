@@ -13,6 +13,7 @@ from typing import Set, Tuple, Optional
 
 from lib.backup import create_vault_backup
 from lib.api import MediaAPIFactory
+from lib.poster_downloader import PosterDownloader
 
 
 def extract_title_and_year(input_string: str) -> Tuple[str, Optional[str]]:
@@ -266,6 +267,72 @@ def handle_add_command(args):
     print("\n✅ Done!")
 
 
+def handle_posters_command(args):
+    """Handle the 'posters' subcommand."""
+    vault_path = Path(args.vault_path)
+
+    # Validate vault path
+    if not vault_path.is_dir():
+        print(f"❌ Vault path does not exist: {vault_path}")
+        sys.exit(1)
+
+    # Get TMDB API key
+    tmdb_api_key = os.environ.get('TMDB_API_KEY')
+    if not tmdb_api_key:
+        print("❌ TMDB_API_KEY environment variable not set")
+        print("\nTo get an API key:")
+        print("1. Create a free account at https://www.themoviedb.org/")
+        print("2. Go to Settings > API and request an API key")
+        print("3. Set the environment variable: export TMDB_API_KEY='your_key_here'")
+        sys.exit(1)
+
+    # Print header
+    print("🖼️  Obsidian Media Note Manager - Download Posters")
+    print("=" * 80)
+    print(f"Vault: {vault_path}")
+    print(f"Backup: {args.backup_filename}")
+    print(f"Poster width: {args.width}px")
+    print("=" * 80)
+
+    # Create poster downloader
+    downloader = PosterDownloader(vault_path, tmdb_api_key, args.width)
+
+    # Create backup
+    create_vault_backup(vault_path, args.backup_filename)
+
+    # Find media files
+    print("\n🔍 Scanning for movie and series files...")
+    print("-" * 80)
+    media_files = downloader.find_media_files()
+
+    if not media_files:
+        print("\n✓ No files found that need poster processing")
+        return
+
+    print(f"\n📋 Found {len(media_files)} file(s) to process")
+    print("=" * 80)
+
+    # Process each file
+    processed_count = 0
+    skipped_count = 0
+
+    for file_path, media_type in media_files:
+        success = downloader.process_file(file_path, media_type)
+        if success:
+            processed_count += 1
+        else:
+            skipped_count += 1
+
+    # Summary
+    print("\n" + "=" * 80)
+    print("📊 SUMMARY")
+    print("=" * 80)
+    print(f"✓ Processed: {processed_count}")
+    print(f"⊘ Skipped: {skipped_count}")
+    print(f"📦 Backup: {args.backup_filename}")
+    print("\n✅ Done!")
+
+
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -281,6 +348,12 @@ Examples:
 
   # Add games
   echo -e "Elden Ring\\nHollow Knight" | python obsidian_media_add.py add ~/vault backup.zip --media-type game
+
+  # Download posters for existing notes
+  python obsidian_media_add.py posters ~/vault backup.zip
+
+  # Download posters at custom width
+  python obsidian_media_add.py posters ~/vault backup.zip --width 300
 
 Environment Variables:
   TMDB_API_KEY          Required for movies and TV shows
@@ -306,12 +379,35 @@ Environment Variables:
         help='Type of media to add'
     )
 
+    # 'posters' subcommand
+    posters_parser = subparsers.add_parser(
+        'posters',
+        help='Download posters for existing movie and series notes',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    posters_parser.add_argument('vault_path', help='Path to Obsidian vault')
+    posters_parser.add_argument('backup_filename', help='Backup filename (e.g., backup.zip)')
+    posters_parser.add_argument(
+        '--width',
+        type=int,
+        default=200,
+        help='Poster width in pixels (default: 200, range: 50-2000)'
+    )
+
     # Parse arguments
     args = parser.parse_args()
+
+    # Validate width for posters command
+    if args.command == 'posters':
+        if args.width < 50 or args.width > 2000:
+            print("❌ Width must be between 50 and 2000 pixels")
+            sys.exit(1)
 
     # Route to appropriate handler
     if args.command == 'add':
         handle_add_command(args)
+    elif args.command == 'posters':
+        handle_posters_command(args)
 
 
 if __name__ == "__main__":
