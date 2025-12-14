@@ -6,12 +6,71 @@ Add new media notes (movies, TV shows, games) to an Obsidian vault from stdin.
 
 import os
 import sys
+import re
 import argparse
 from pathlib import Path
-from typing import Set
+from typing import Set, Tuple, Optional
 
 from lib.backup import create_vault_backup
 from lib.api import MediaAPIFactory
+
+
+def extract_title_and_year(input_string: str) -> Tuple[str, Optional[str]]:
+    """
+    Extract title and year from input string in 'Title (Year)' format.
+
+    Args:
+        input_string: Input string, possibly with year in parentheses
+
+    Returns:
+        Tuple of (title, year) where year is None if not found
+
+    Examples:
+        "Inception (2010)" -> ("Inception", "2010")
+        "Inception" -> ("Inception", None)
+        "The Matrix (1999)" -> ("The Matrix", "1999")
+    """
+    # Match pattern: Title (Year) where Year is 4 digits
+    match = re.match(r'^(.+?)\s*\((\d{4})\)\s*$', input_string)
+    if match:
+        return match.group(1).strip(), match.group(2)
+    else:
+        return input_string.strip(), None
+
+
+def filter_results_by_year(results: list, year: str, media_type: str) -> list:
+    """
+    Filter search results by year.
+
+    Args:
+        results: List of API search results
+        year: Year to filter by (4 digits)
+        media_type: 'movie', 'tv', or 'game'
+
+    Returns:
+        Filtered list of results matching the year
+    """
+    filtered = []
+    for result in results:
+        result_year = None
+
+        if media_type in ['movie', 'tv']:
+            # TMDB format
+            if media_type == 'movie' and 'release_date' in result:
+                result_year = result['release_date'][:4] if result['release_date'] else None
+            elif media_type == 'tv' and 'first_air_date' in result:
+                result_year = result['first_air_date'][:4] if result['first_air_date'] else None
+        elif media_type == 'game':
+            # IGDB format - convert timestamp to year
+            if 'first_release_date' in result:
+                from datetime import datetime
+                timestamp = result['first_release_date']
+                result_year = str(datetime.fromtimestamp(timestamp).year)
+
+        if result_year == year:
+            filtered.append(result)
+
+    return filtered
 
 
 def read_titles_from_stdin() -> list[str]:
@@ -45,23 +104,30 @@ def read_titles_from_stdin() -> list[str]:
     return unique_titles
 
 
-def process_title(client, vault_path: Path, title: str) -> bool:
+def process_title(client, vault_path: Path, title_input: str, media_type: str) -> bool:
     """
     Process a single title: search, disambiguate, fetch details, create file.
 
     Args:
         client: MediaAPIClient instance
         vault_path: Path to Obsidian vault
-        title: Title to search for
+        title_input: Title to search for (may include year in parentheses)
+        media_type: Type of media ('movie', 'tv', or 'game')
 
     Returns:
         True if successful, False if skipped or failed
     """
     print(f"\n{'='*80}")
-    print(f"Processing: {title}")
+    print(f"Processing: {title_input}")
     print(f"{'='*80}")
 
-    # Search for the title
+    # Extract title and year from input
+    title, year = extract_title_and_year(title_input)
+
+    if year:
+        print(f"📅 Detected year: {year} - will use for auto-disambiguation")
+
+    # Search for the title (without year)
     try:
         results = client.search(title)
     except Exception as e:
@@ -72,6 +138,15 @@ def process_title(client, vault_path: Path, title: str) -> bool:
         print(f"❌ No results found for '{title}'")
         return False
 
+    # Filter by year if provided
+    if year:
+        year_filtered = filter_results_by_year(results, year, media_type)
+        if year_filtered:
+            results = year_filtered
+            print(f"✓ Filtered to {len(results)} result(s) matching year {year}")
+        else:
+            print(f"⚠️  No results found for year {year}, showing all results")
+
     # Handle disambiguation
     if len(results) > 1:
         selected = client.prompt_disambiguation(title, results)
@@ -80,6 +155,8 @@ def process_title(client, vault_path: Path, title: str) -> bool:
             return False
     else:
         selected = results[0]
+        if year:
+            print(f"✓ Auto-selected the only result matching year {year}")
 
     # Get detailed information
     media_id = str(selected.get('id'))
@@ -166,7 +243,7 @@ def handle_add_command(args):
     error_count = 0
 
     for title in titles:
-        success = process_title(client, vault_path, title)
+        success = process_title(client, vault_path, title, args.media_type)
         if success:
             created_count += 1
         else:
