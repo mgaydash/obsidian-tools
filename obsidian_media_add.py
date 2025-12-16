@@ -187,29 +187,21 @@ def handle_add_command(args):
 
     # Process each title
     created_count = 0
-    skipped_count = 0
-    error_count = 0
+    failed_count = 0
 
     for title in titles:
         success = process_title(client, vault_path, title, args.media_type)
         if success:
             created_count += 1
         else:
-            # Could be user skip or error
-            # We already printed the specific message in process_title
-            if "Skipped" in sys.stdout:
-                skipped_count += 1
-            else:
-                error_count += 1
+            failed_count += 1
 
     # Summary
     print("\n" + "=" * 80)
     print("📊 SUMMARY")
     print("=" * 80)
     print(f"✓ Created: {created_count}")
-    print(f"⊘ Skipped: {skipped_count}")
-    if error_count > 0:
-        print(f"❌ Errors: {error_count}")
+    print(f"⊘ Skipped/Failed: {failed_count}")
     print(f"📦 Backup: {args.backup_filename}")
     print("\n✅ Done!")
 
