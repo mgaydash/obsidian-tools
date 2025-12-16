@@ -1,5 +1,7 @@
 """IGDB API client for games."""
 
+import json
+import requests
 from typing import List, Dict, Optional
 from igdb.wrapper import IGDBWrapper
 from .base import MediaAPIClient
@@ -9,15 +11,43 @@ from ..obsidian_utils import sanitize_filename, format_wikilink
 class IGDBClient(MediaAPIClient):
     """IGDB API client implementation."""
 
-    def __init__(self, client_id: str, access_token: str):
+    def __init__(self, client_id: str, client_secret: str):
         """
         Initialize IGDB client.
 
         Args:
             client_id: Twitch application client ID
-            access_token: Twitch OAuth access token
+            client_secret: Twitch application client secret
         """
+        self.client_id = client_id
+        self.client_secret = client_secret
+
+        # Generate access token via OAuth2
+        access_token = self._get_access_token()
         self.wrapper = IGDBWrapper(client_id, access_token)
+
+    def _get_access_token(self) -> str:
+        """
+        Generate OAuth2 access token from Twitch.
+
+        Returns:
+            Access token string
+
+        Raises:
+            Exception if token generation fails
+        """
+        url = "https://id.twitch.tv/oauth2/token"
+        params = {
+            'client_id': self.client_id,
+            'client_secret': self.client_secret,
+            'grant_type': 'client_credentials'
+        }
+
+        response = requests.post(url, params=params)
+        response.raise_for_status()
+
+        data = response.json()
+        return data['access_token']
 
     def search(self, title: str) -> List[Dict]:
         """Search IGDB for a game title."""
@@ -29,7 +59,7 @@ class IGDBClient(MediaAPIClient):
         '''
 
         byte_array = self.wrapper.api_request('games', query)
-        results = eval(byte_array.decode('utf-8'))
+        results = json.loads(byte_array.decode('utf-8'))
 
         return results if isinstance(results, list) else []
 
@@ -41,9 +71,8 @@ class IGDBClient(MediaAPIClient):
                    involved_companies.developer, involved_companies.publisher;
             where id = {media_id};
         '''
-
         byte_array = self.wrapper.api_request('games', query)
-        results = eval(byte_array.decode('utf-8'))
+        results = json.loads(byte_array.decode('utf-8'))
 
         if not results or not isinstance(results, list):
             raise ValueError(f"Game with ID {media_id} not found")
@@ -70,7 +99,6 @@ class IGDBClient(MediaAPIClient):
             print(f"{idx}. {name} ({year}) [GAME]")
             print(f"   {summary}...")
             print()
-
         print("0. Skip this file")
         print("-" * 80)
 

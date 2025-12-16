@@ -18,7 +18,7 @@ export TMDB_API_KEY='your_key_here'
 
 # For games (optional)
 export IGDB_CLIENT_ID='your_client_id'
-export IGDB_ACCESS_TOKEN='your_access_token'
+export IGDB_CLIENT_SECRET='your_client_secret'
 ```
 
 Get TMDB API key: https://www.themoviedb.org/ (Settings > API)

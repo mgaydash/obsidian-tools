@@ -160,7 +160,7 @@ def handle_add_command(args):
         print("  export TMDB_API_KEY='your_key_here'")
         print("\nFor IGDB (games):")
         print("  export IGDB_CLIENT_ID='your_client_id'")
-        print("  export IGDB_ACCESS_TOKEN='your_access_token'")
+        print("  export IGDB_CLIENT_SECRET='your_client_secret'")
         sys.exit(1)
 
     # Print header
@@ -297,7 +297,7 @@ Examples:
 Environment Variables:
   TMDB_API_KEY          Required for movies and TV shows
   IGDB_CLIENT_ID        Required for games (Twitch application client ID)
-  IGDB_ACCESS_TOKEN     Required for games (Twitch OAuth access token)
+  IGDB_CLIENT_SECRET    Required for games (Twitch application client secret)
         """
     )
 

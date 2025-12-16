@@ -31,10 +31,10 @@ class MediaAPIFactory:
 
         elif media_type == 'game':
             client_id = os.environ.get('IGDB_CLIENT_ID')
-            access_token = os.environ.get('IGDB_ACCESS_TOKEN')
-            if not client_id or not access_token:
-                raise ValueError("IGDB_CLIENT_ID and IGDB_ACCESS_TOKEN environment variables required")
-            return IGDBClient(client_id, access_token)
+            client_secret = os.environ.get('IGDB_CLIENT_SECRET')
+            if not client_id or not client_secret:
+                raise ValueError("IGDB_CLIENT_ID and IGDB_CLIENT_SECRET environment variables required")
+            return IGDBClient(client_id, client_secret)
 
         else:
             raise ValueError(f"Invalid media type: {media_type}. Must be 'movie', 'tv', or 'game'")
