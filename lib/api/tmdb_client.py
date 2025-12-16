@@ -3,7 +3,7 @@
 import requests
 from typing import List, Dict, Optional
 from .base import MediaAPIClient
-from ..obsidian_utils import sanitize_filename, format_wikilink
+from ..obsidian_utils import sanitize_filename, format_wikilink, translate_genre_tag
 
 
 class TMDBClient(MediaAPIClient):
@@ -130,9 +130,11 @@ class TMDBClient(MediaAPIClient):
         # Add genre tags
         genres = details.get('genres', [])
         for genre in genres:
-            genre_name = genre.get('name', '').lower()
+            genre_name = genre.get('name', '')
             if genre_name:
-                tags.append(genre_name)
+                tag = translate_genre_tag(genre_name)
+                if tag and tag not in tags:
+                    tags.append(tag)
 
         # Format tags for YAML
         tags_yaml = '\n'.join([f'  - {tag}' for tag in tags])

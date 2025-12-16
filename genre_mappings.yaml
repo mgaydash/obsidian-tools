@@ -1,0 +1,88 @@
+# Genre Translation Mappings
+# Maps API genre strings to Obsidian-friendly tags
+# Format: "obsidian-tag": ["api genre 1", "api genre 2", ...]
+
+# Common mappings across TMDB and IGDB
+rpg:
+  - role-playing (rpg)
+  - role playing
+  - rpg
+
+sci-fi:
+  - science fiction
+  - sci-fi
+  - scifi
+
+action-adventure:
+  - action/adventure
+  - action & adventure
+
+point-and-click:
+  - point-and-click
+
+hack-and-slash:
+  - hack and slash/beat 'em up
+  - hack and slash
+
+beat-em-up:
+  - beat 'em up
+
+strategy:
+  - real time strategy (rts)
+  - turn-based strategy (tbs)
+  - strategy
+  - rts
+  - tbs
+
+shooter:
+  - first-person shooter
+  - third-person shooter
+  - shooter
+  - fps
+
+moba:
+  - moba
+
+fighting:
+  - fighting
+
+racing:
+  - racing
+
+sports:
+  - sport
+  - sports
+
+puzzle:
+  - puzzle
+
+platformer:
+  - platform
+  - platformer
+
+simulator:
+  - simulator
+  - simulation
+
+indie:
+  - indie
+  - independent
+
+adventure:
+  - adventure
+
+action:
+  - action
+
+arcade:
+  - arcade
+
+music:
+  - music
+
+visual-novel:
+  - visual novel
+
+card:
+  - card & board game
+  - card game
