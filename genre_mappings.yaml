@@ -12,6 +12,8 @@ sci-fi:
   - science fiction
   - sci-fi
   - scifi
+  - sifi
+  - si-fi
 
 action-adventure:
   - action/adventure
@@ -86,3 +88,7 @@ visual-novel:
 card:
   - card & board game
   - card game
+
+zombie:
+  - zombie
+  - zombies
