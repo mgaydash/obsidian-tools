@@ -65,10 +65,10 @@ class IGDBClient(MediaAPIClient):
 
     def get_details(self, media_id: str) -> Dict:
         """Get detailed information from IGDB."""
-        # Get game details with expanded company information
+        # Get game details with expanded company and game mode information
         query = f'''
             fields name, first_release_date, summary, url, involved_companies.company.name,
-                   involved_companies.developer, involved_companies.publisher;
+                   involved_companies.developer, involved_companies.publisher, game_modes.name;
             where id = {media_id};
         '''
         byte_array = self.wrapper.api_request('games', query)
@@ -143,10 +143,30 @@ class IGDBClient(MediaAPIClient):
         # Build description
         description = f"{summary} Developed by {dev_text}. Published by {pub_text}."
 
+        # Build tags list
+        tags = ['game']
+
+        # Add game mode tags
+        game_modes = details.get('game_modes', [])
+        for mode in game_modes:
+            mode_name = mode.get('name', '').lower()
+            if 'single player' in mode_name or 'singleplayer' in mode_name:
+                if 'single-player' not in tags:
+                    tags.append('single-player')
+            if 'multiplayer' in mode_name and 'mmo' not in mode_name:
+                if 'multiplayer' not in tags:
+                    tags.append('multiplayer')
+            if 'co-op' in mode_name or 'cooperative' in mode_name:
+                if 'co-op' not in tags:
+                    tags.append('co-op')
+
+        # Format tags for YAML
+        tags_yaml = '\n'.join([f'  - {tag}' for tag in tags])
+
         # Format the content
         content = f"""---
 tags:
-  - game
+{tags_yaml}
 ---
 
 ## Links
