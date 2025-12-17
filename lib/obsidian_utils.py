@@ -230,4 +230,9 @@ def translate_genre_tag(genre: str) -> str:
     sanitized = re.sub(r'-+', '-', sanitized)         # Collapse multiple hyphens
     sanitized = sanitized.strip('-')                   # Remove leading/trailing hyphens
 
-    return sanitized if sanitized else 'unknown'
+    result = sanitized if sanitized else 'unknown'
+
+    # Warn user about missing mapping so they can add it to genre_mappings.yaml
+    print(f"⚠️  No genre mapping for '{genre}' - using sanitized value: '{result}'")
+
+    return result
