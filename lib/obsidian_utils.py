@@ -1,6 +1,5 @@
 """Utilities for working with Obsidian markdown files."""
 
-import os
 import re
 import yaml
 from pathlib import Path
@@ -32,6 +31,42 @@ def sanitize_filename(title: str) -> str:
 def format_wikilink(text: str) -> str:
     """Format text as an Obsidian wikilink."""
     return f"[[{text}]]"
+
+
+def get_user_input(prompt: str) -> str:
+    """
+    Get user input from terminal, even when stdin is piped.
+
+    This function reads from the controlling terminal (/dev/tty on Unix, CON on Windows)
+    instead of stdin, allowing interactive prompts to work when stdin is piped.
+
+    Args:
+        prompt: The prompt to display to the user
+
+    Returns:
+        User input as a string (with trailing newline removed)
+
+    Raises:
+        EOFError: If unable to read from terminal
+    """
+    # Try to open the controlling terminal
+    try:
+        # Unix-like systems
+        with open('/dev/tty', 'r') as tty:
+            print(prompt, end='', flush=True)
+            return tty.readline().rstrip('\n\r')
+    except (OSError, IOError, FileNotFoundError):
+        try:
+            # Windows
+            with open('CON', 'r') as tty:
+                print(prompt, end='', flush=True)
+                return tty.readline().rstrip('\n\r')
+        except (OSError, IOError, FileNotFoundError):
+            # If both fail, raise an error
+            raise EOFError(
+                "Cannot read from terminal. Interactive prompts are not available "
+                "when stdin is piped and terminal access is unavailable."
+            )
 
 
 def extract_title_and_year(input_string: str) -> Tuple[str, Optional[str]]:

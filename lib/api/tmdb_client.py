@@ -3,7 +3,7 @@
 import requests
 from typing import List, Dict, Optional
 from .base import MediaAPIClient
-from ..obsidian_utils import sanitize_filename, format_wikilink, translate_genre_tag
+from ..obsidian_utils import sanitize_filename, format_wikilink, translate_genre_tag, get_user_input
 
 
 class TMDBClient(MediaAPIClient):
@@ -75,7 +75,7 @@ class TMDBClient(MediaAPIClient):
 
         while True:
             try:
-                choice = input("Select the correct match (0 to skip): ").strip()
+                choice = get_user_input("Select the correct match (0 to skip): ").strip()
                 choice_num = int(choice)
 
                 if choice_num == 0:

@@ -13,7 +13,7 @@ from typing import Set
 from lib.backup import create_vault_backup
 from lib.api import MediaAPIFactory
 from lib.poster_downloader import PosterDownloader
-from lib.obsidian_utils import extract_title_and_year, filter_results_by_year, find_exact_title_match
+from lib.obsidian_utils import extract_title_and_year, filter_results_by_year, find_exact_title_match, get_user_input
 
 
 def read_titles_from_stdin() -> list[str]:
@@ -126,7 +126,7 @@ def process_title(client, vault_path: Path, title_input: str, media_type: str) -
     file_path = vault_path / filename
     if file_path.exists():
         print(f"⚠️  File already exists: {filename}")
-        overwrite = input("Overwrite? (y/n): ").strip().lower()
+        overwrite = get_user_input("Overwrite? (y/n): ").strip().lower()
         if overwrite != 'y':
             print("⊘ Skipped")
             return False

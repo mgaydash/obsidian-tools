@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from PIL import Image
 from io import BytesIO
-from .obsidian_utils import extract_title_and_year, filter_results_by_year, find_exact_title_match
+from .obsidian_utils import extract_title_and_year, filter_results_by_year, find_exact_title_match, get_user_input
 
 
 class PosterDownloader:
@@ -175,7 +175,7 @@ class PosterDownloader:
 
         while True:
             try:
-                choice = input("Select the correct match (0 to skip): ").strip()
+                choice = get_user_input("Select the correct match (0 to skip): ").strip()
                 choice_num = int(choice)
 
                 if choice_num == 0:
