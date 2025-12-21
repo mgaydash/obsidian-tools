@@ -14,6 +14,7 @@ from lib.backup import create_vault_backup
 from lib.api import MediaAPIFactory
 from lib.poster_downloader import PosterDownloader
 from lib.obsidian_utils import extract_title_and_year, filter_results_by_year, find_exact_title_match, get_user_input
+from lib.poster_utils import download_and_resize_poster, update_frontmatter_with_poster
 
 
 def read_titles_from_stdin() -> list[str]:
@@ -47,15 +48,24 @@ def read_titles_from_stdin() -> list[str]:
     return unique_titles
 
 
-def process_title(client, vault_path: Path, title_input: str, media_type: str) -> bool:
+def process_title(
+    client,
+    vault_path: Path,
+    title_input: str,
+    media_type: str,
+    tmdb_api_key: str = None,
+    poster_width: int = 200
+) -> bool:
     """
-    Process a single title: search, disambiguate, fetch details, create file.
+    Process a single title: search, disambiguate, fetch details, create file, download poster.
 
     Args:
         client: MediaAPIClient instance
         vault_path: Path to Obsidian vault
         title_input: Title to search for (may include year in parentheses)
         media_type: Type of media ('movie', 'tv', or 'game')
+        tmdb_api_key: TMDB API key for downloading posters (optional, only for movies/TV)
+        poster_width: Width to resize posters to (default: 200px)
 
     Returns:
         True if successful, False if skipped or failed
@@ -136,10 +146,30 @@ def process_title(client, vault_path: Path, title_input: str, media_type: str) -
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(content)
         print(f"✓ Successfully created: {filename}")
-        return True
     except Exception as e:
         print(f"❌ Error writing file: {e}")
         return False
+
+    # Download poster for movies/TV shows (not games)
+    if media_type in ('movie', 'tv') and tmdb_api_key:
+        poster_path = details.get('poster_path')
+        if poster_path:
+            print(f"📥 Downloading poster...")
+            poster_filename = file_path.stem + '.jpg'
+            poster_file_path = file_path.parent / poster_filename
+
+            if download_and_resize_poster(poster_path, poster_file_path, tmdb_api_key, poster_width):
+                print(f"✓ Poster saved: {poster_filename}")
+                if update_frontmatter_with_poster(file_path, poster_filename):
+                    print(f"✓ Frontmatter updated with poster wikilink")
+                else:
+                    print(f"⚠️  Failed to update frontmatter with poster")
+            else:
+                print(f"⚠️  Failed to download poster")
+        else:
+            print(f"⚠️  No poster available for this {media_type}")
+
+    return True
 
 
 def handle_add_command(args):
@@ -163,6 +193,12 @@ def handle_add_command(args):
         print("  export IGDB_CLIENT_SECRET='your_client_secret'")
         sys.exit(1)
 
+    # Get TMDB API key for poster downloading (movies/TV only)
+    tmdb_api_key = None
+    if args.media_type in ('movie', 'tv'):
+        tmdb_api_key = os.environ.get('TMDB_API_KEY')
+        # Note: We already validated this in MediaAPIFactory.create_client above
+
     # Print header
     media_emoji = {'movie': '🎬', 'tv': '📺', 'game': '🎮'}
     print(f"{media_emoji.get(args.media_type, '📝')} Obsidian Media Note Manager - Add {args.media_type.title()}s")
@@ -170,6 +206,8 @@ def handle_add_command(args):
     print(f"Vault: {vault_path}")
     print(f"Backup: {args.backup_filename}")
     print(f"Media Type: {args.media_type}")
+    if args.media_type in ('movie', 'tv'):
+        print(f"Poster width: {args.poster_width}px")
     print("=" * 80)
 
     # Create backup
@@ -190,7 +228,14 @@ def handle_add_command(args):
     failed_count = 0
 
     for title in titles:
-        success = process_title(client, vault_path, title, args.media_type)
+        success = process_title(
+            client,
+            vault_path,
+            title,
+            args.media_type,
+            tmdb_api_key,
+            args.poster_width
+        )
         if success:
             created_count += 1
         else:
@@ -317,6 +362,12 @@ Environment Variables:
         choices=['movie', 'tv', 'game'],
         help='Type of media to add'
     )
+    add_parser.add_argument(
+        '--poster-width',
+        type=int,
+        default=200,
+        help='Poster width in pixels for movies/TV (default: 200, range: 50-2000)'
+    )
 
     # 'posters' subcommand
     posters_parser = subparsers.add_parser(
@@ -336,10 +387,14 @@ Environment Variables:
     # Parse arguments
     args = parser.parse_args()
 
-    # Validate width for posters command
+    # Validate width arguments
     if args.command == 'posters':
         if args.width < 50 or args.width > 2000:
             print("❌ Width must be between 50 and 2000 pixels")
+            sys.exit(1)
+    elif args.command == 'add':
+        if args.poster_width < 50 or args.poster_width > 2000:
+            print("❌ Poster width must be between 50 and 2000 pixels")
             sys.exit(1)
 
     # Route to appropriate handler

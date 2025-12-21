@@ -1,12 +1,10 @@
 """Poster downloader for Obsidian media notes."""
 
 import requests
-import yaml
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple
-from PIL import Image
-from io import BytesIO
+from typing import List, Dict, Optional
 from .obsidian_utils import extract_title_and_year, filter_results_by_year, find_exact_title_match, get_user_input
+from .poster_utils import download_and_resize_poster, extract_yaml_frontmatter, update_frontmatter_with_poster
 
 
 class PosterDownloader:
@@ -25,23 +23,6 @@ class PosterDownloader:
         self.tmdb_api_key = tmdb_api_key
         self.poster_width = poster_width
         self.tmdb_base_url = "https://api.themoviedb.org/3"
-        self.tmdb_image_base_url = "https://image.tmdb.org/t/p/original"
-
-    def extract_yaml_frontmatter(self, content: str) -> Tuple[Optional[Dict], str]:
-        """Extract YAML frontmatter and return it with the remaining content."""
-        if not content.startswith('---'):
-            return None, content
-
-        parts = content.split('---', 2)
-        if len(parts) < 3:
-            return None, content
-
-        try:
-            frontmatter = yaml.safe_load(parts[1])
-            remaining_content = parts[2]
-            return frontmatter, remaining_content
-        except yaml.YAMLError:
-            return None, content
 
     def get_media_type_from_tags(self, file_path: Path) -> Optional[str]:
         """
@@ -58,7 +39,7 @@ class PosterDownloader:
                 content = f.read()
 
             # Check YAML frontmatter
-            frontmatter, remaining = self.extract_yaml_frontmatter(content)
+            frontmatter, remaining = extract_yaml_frontmatter(content)
             if frontmatter and 'tags' in frontmatter:
                 tags = frontmatter['tags']
                 if isinstance(tags, list):
@@ -86,7 +67,7 @@ class PosterDownloader:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            frontmatter, _ = self.extract_yaml_frontmatter(content)
+            frontmatter, _ = extract_yaml_frontmatter(content)
             if frontmatter and 'poster' in frontmatter:
                 poster_value = frontmatter['poster']
                 if poster_value and str(poster_value).strip():
@@ -187,73 +168,6 @@ class PosterDownloader:
             except ValueError:
                 print("Please enter a valid number")
 
-    def download_and_resize_poster(self, poster_path: str, output_path: Path) -> bool:
-        """Download poster from TMDB, resize it, convert to JPEG."""
-        try:
-            # Download the image
-            image_url = f"{self.tmdb_image_base_url}{poster_path}"
-            response = requests.get(image_url)
-            response.raise_for_status()
-
-            # Open image with PIL
-            img = Image.open(BytesIO(response.content))
-
-            # Calculate new height maintaining aspect ratio
-            aspect_ratio = img.height / img.width
-            new_height = int(self.poster_width * aspect_ratio)
-
-            # Resize image
-            img_resized = img.resize((self.poster_width, new_height), Image.Resampling.LANCZOS)
-
-            # Convert to RGB if needed (for JPEG)
-            if img_resized.mode in ('RGBA', 'LA', 'P'):
-                background = Image.new('RGB', img_resized.size, (255, 255, 255))
-                if img_resized.mode == 'P':
-                    img_resized = img_resized.convert('RGBA')
-                if img_resized.mode in ('RGBA', 'LA'):
-                    background.paste(img_resized, mask=img_resized.split()[-1])
-                    img_resized = background
-                else:
-                    img_resized = img_resized.convert('RGB')
-            elif img_resized.mode != 'RGB':
-                img_resized = img_resized.convert('RGB')
-
-            # Save as JPEG
-            img_resized.save(output_path, 'JPEG', quality=85, optimize=True)
-
-            return True
-
-        except Exception as e:
-            print(f"❌ Error downloading/processing poster: {e}")
-            return False
-
-    def update_frontmatter_with_poster(self, file_path: Path, poster_filename: str) -> bool:
-        """Update the file's YAML frontmatter to include the poster wikilink."""
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-
-            frontmatter, remaining_content = self.extract_yaml_frontmatter(content)
-
-            if frontmatter is None:
-                frontmatter = {}
-
-            # Add poster property with wikilink
-            frontmatter['poster'] = f"[[{poster_filename}]]"
-
-            # Reconstruct the file with updated frontmatter
-            yaml_str = yaml.dump(frontmatter, default_flow_style=False, sort_keys=False)
-            new_content = f"---\n{yaml_str}---{remaining_content}"
-
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(new_content)
-
-            return True
-
-        except Exception as e:
-            print(f"❌ Error updating frontmatter: {e}")
-            return False
-
     def process_file(self, file_path: Path, media_type: str) -> bool:
         """
         Process a single file: search TMDB, download poster, update frontmatter.
@@ -324,13 +238,13 @@ class PosterDownloader:
 
         # Download and resize poster
         print(f"📥 Downloading poster...")
-        if not self.download_and_resize_poster(poster_path, poster_file_path):
+        if not download_and_resize_poster(poster_path, poster_file_path, self.tmdb_api_key, self.poster_width):
             return False
 
         print(f"✓ Poster saved: {poster_filename}")
 
         # Update frontmatter with wikilink
-        if not self.update_frontmatter_with_poster(file_path, poster_filename):
+        if not update_frontmatter_with_poster(file_path, poster_filename):
             return False
 
         print(f"✓ Frontmatter updated with poster wikilink")
