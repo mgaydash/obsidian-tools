@@ -2,7 +2,7 @@
 
 import requests
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from .obsidian_utils import extract_title_and_year, filter_results_by_year, find_exact_title_match, get_user_input
 from .poster_utils import download_and_resize_poster, extract_yaml_frontmatter, update_frontmatter_with_poster
 
