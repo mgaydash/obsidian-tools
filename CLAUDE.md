@@ -19,7 +19,8 @@ lib/                              # Shared library modules
 │   └── igdb_client.py           # IGDB implementation (games)
 ├── backup.py                    # Vault backup utilities
 ├── obsidian_utils.py            # YAML, wikilinks, year extraction, disambiguation
-└── poster_downloader.py         # Poster download and frontmatter updates
+├── poster_utils.py              # Shared poster download/resize utilities
+└── poster_downloader.py         # Standalone poster command implementation
 
 obsidian_media_add.py            # Main CLI with subcommands
 ```
@@ -29,7 +30,7 @@ obsidian_media_add.py            # Main CLI with subcommands
 **Factory Pattern (`lib/api/__init__.py`):**
 - `MediaAPIFactory.create_client(media_type)` routes to appropriate API client
 - Returns TMDB client for 'movie'/'tv', IGDB client for 'game'
-- Validates environment variables (TMDB_API_KEY, IGDB_CLIENT_ID, IGDB_ACCESS_TOKEN)
+- Validates environment variables (TMDB_API_KEY, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET)
 
 **Abstract Base Class (`lib/api/base.py`):**
 All API clients implement `MediaAPIClient` interface:
@@ -46,6 +47,13 @@ All API clients implement `MediaAPIClient` interface:
 
 This shared logic ensures consistent behavior across both 'add' and 'posters' commands.
 
+**Shared Poster Utilities (`lib/poster_utils.py`):**
+- `download_and_resize_poster(poster_path, output_path, api_key, width)` - Downloads from TMDB, resizes, converts to JPEG
+- `extract_yaml_frontmatter(content)` - Parses YAML frontmatter from markdown
+- `update_frontmatter_with_poster(file_path, poster_filename)` - Updates frontmatter with poster wikilink
+
+Used by both the integrated 'add' command poster download and the standalone 'posters' command to avoid code duplication.
+
 ## Commands
 
 ### Setup
@@ -53,9 +61,9 @@ This shared logic ensures consistent behavior across both 'add' and 'posters' co
 pip install -r requirements.txt
 
 # Set environment variables
-export TMDB_API_KEY='your_key'           # For movies/TV
-export IGDB_CLIENT_ID='your_client_id'   # For games
-export IGDB_ACCESS_TOKEN='your_token'    # For games
+export TMDB_API_KEY='your_key'              # For movies/TV
+export IGDB_CLIENT_ID='your_client_id'      # For games
+export IGDB_CLIENT_SECRET='your_secret'     # For games
 ```
 
 ### Main CLI Commands
@@ -63,17 +71,18 @@ export IGDB_ACCESS_TOKEN='your_token'    # For games
 **Add new media notes:**
 ```bash
 # Movies (reads from stdin, newline-separated)
+# Automatically downloads posters for movies/TV during creation
 echo -e "Inception\nThe Matrix" | python obsidian_media_add.py add ~/vault backup.zip --media-type movie
 
-# TV shows
-python obsidian_media_add.py add ~/vault backup.zip --media-type tv
+# TV shows with custom poster width
+python obsidian_media_add.py add ~/vault backup.zip --media-type tv --poster-width 300
 # Then paste titles and press Ctrl+D
 
-# Games
+# Games (no posters - IGDB doesn't provide poster URLs)
 echo "Elden Ring" | python obsidian_media_add.py add ~/vault backup.zip --media-type game
 ```
 
-**Download posters for existing notes:**
+**Download posters for existing notes (retroactive):**
 ```bash
 # Default 200px width
 python obsidian_media_add.py posters ~/vault backup.zip
@@ -109,11 +118,13 @@ Both 'add' and 'posters' commands use intelligent disambiguation:
 - Movies use 'title' and 'release_date'
 - TV uses 'name' and 'first_air_date'
 - Both return 'credits' (cast/crew) and 'external_ids' (IMDB)
+- Both return 'poster_path' for poster downloads (used automatically in 'add' command)
 
 **IGDB (games):**
 - Uses 'name' and 'first_release_date' (Unix timestamp)
 - Returns 'involved_companies' with developer/publisher flags
 - Returns 'url' instead of external_ids
+- Does not provide poster URLs (no automatic poster download for games)
 
 ### Tag Detection
 
@@ -125,13 +136,20 @@ Note: Avoids 'entertainment' tag (deprecated).
 
 ### Poster Download Workflow
 
+**Integrated in 'add' command (movies/TV only):**
+1. After creating note, check if TMDB returned poster_path
+2. Download poster, resize maintaining aspect ratio to specified width (default: 200px)
+3. Convert to JPEG (quality=85)
+4. Save as "Title (Year).jpg" in same directory as note
+5. Update YAML frontmatter: `poster: [[filename.jpg]]`
+
+**Standalone 'posters' command (retroactive):**
 1. Scan vault for files tagged 'movie' or 'series' without 'poster' property
 2. Extract title and year from filename
 3. Search TMDB (converts 'series' → 'tv' for API)
-4. Download poster, resize maintaining aspect ratio
-5. Convert to JPEG (quality=85)
-6. Save as "Title (Year).jpg"
-7. Update YAML frontmatter: `poster: [[filename.jpg]]`
+4. Follow same download/resize/save workflow as above
+
+Both workflows use shared utilities from `lib/poster_utils.py`.
 
 ### Wikilink Formatting
 
@@ -154,7 +172,7 @@ Applied to all generated filenames.
 
 **Required for games:**
 - `IGDB_CLIENT_ID` - Twitch application client ID
-- `IGDB_ACCESS_TOKEN` - Twitch OAuth access token
+- `IGDB_CLIENT_SECRET` - Twitch application client secret
 - Setup: https://api-docs.igdb.com/#getting-started
 
 ## Common Patterns
@@ -179,3 +197,18 @@ Applied to all generated filenames.
 ### Extending Disambiguation Logic
 
 Shared logic in `lib/obsidian_utils.py` used by all commands. Modify `find_exact_title_match()` or `filter_results_by_year()` to affect both 'add' and 'posters' commands simultaneously.
+
+### Working with Poster Utilities
+
+Common poster functionality lives in `lib/poster_utils.py` to avoid duplication:
+
+```python
+from lib.poster_utils import download_and_resize_poster, update_frontmatter_with_poster
+
+# Download and save poster
+if download_and_resize_poster(poster_path, output_file, tmdb_api_key, width):
+    # Update note's frontmatter with wikilink
+    update_frontmatter_with_poster(note_file, poster_filename)
+```
+
+Both the integrated 'add' command and standalone 'posters' command use these utilities. Any changes to poster download logic should be made in `poster_utils.py` to benefit both workflows.
