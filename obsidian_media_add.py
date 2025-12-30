@@ -262,34 +262,43 @@ def handle_posters_command(args):
         print(f"❌ Vault path does not exist: {vault_path}")
         sys.exit(1)
 
-    # Get TMDB API key
+    # Get API credentials
     tmdb_api_key = os.environ.get('TMDB_API_KEY')
-    if not tmdb_api_key:
-        print("❌ TMDB_API_KEY environment variable not set")
-        print("\nTo get an API key:")
-        print("1. Create a free account at https://www.themoviedb.org/")
-        print("2. Go to Settings > API and request an API key")
-        print("3. Set the environment variable: export TMDB_API_KEY='your_key_here'")
-        sys.exit(1)
+    igdb_client_id = os.environ.get('IGDB_CLIENT_ID')
+    igdb_client_secret = os.environ.get('IGDB_CLIENT_SECRET')
 
     # Print header
     print("🖼️  Obsidian Media Note Manager - Download Posters")
     print("=" * 80)
     print(f"Vault: {vault_path}")
     print(f"Backup: {args.backup_filename}")
+    print(f"Media type filter: {args.media_type}")
     print(f"Poster width: {args.width}px")
     print("=" * 80)
 
     # Create poster downloader
-    downloader = PosterDownloader(vault_path, tmdb_api_key, args.width)
+    downloader = PosterDownloader(
+        vault_path,
+        tmdb_api_key=tmdb_api_key,
+        igdb_client_id=igdb_client_id,
+        igdb_client_secret=igdb_client_secret,
+        poster_width=args.width
+    )
 
     # Create backup
     create_vault_backup(vault_path, args.backup_filename)
 
     # Find media files
-    print("\n🔍 Scanning for movie and series files...")
+    print("\n🔍 Scanning for media files...")
     print("-" * 80)
     media_files = downloader.find_media_files()
+
+    # Apply media type filter
+    if args.media_type != 'all':
+        # Convert 'tv' CLI arg to 'series' for internal consistency
+        filter_type = 'series' if args.media_type == 'tv' else args.media_type
+        media_files = [(f, t) for f, t in media_files if t == filter_type]
+        print(f"✓ Filtered to {args.media_type} files only")
 
     if not media_files:
         print("\n✓ No files found that need poster processing")
@@ -384,6 +393,12 @@ Environment Variables:
         type=int,
         default=200,
         help='Poster width in pixels (default: 200, range: 50-2000)'
+    )
+    posters_parser.add_argument(
+        '--media-type',
+        choices=['all', 'movie', 'tv', 'game'],
+        default='all',
+        help='Filter by media type (default: all)'
     )
 
     # Parse arguments

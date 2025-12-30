@@ -10,29 +10,59 @@ from .poster_utils import download_and_resize_poster, extract_yaml_frontmatter, 
 class PosterDownloader:
     """Download and manage posters for media notes."""
 
-    def __init__(self, vault_path: Path, tmdb_api_key: str, poster_width: int = 200):
+    def __init__(
+        self,
+        vault_path: Path,
+        tmdb_api_key: str = None,
+        igdb_client_id: str = None,
+        igdb_client_secret: str = None,
+        poster_width: int = 200
+    ):
         """
         Initialize poster downloader.
 
         Args:
             vault_path: Path to Obsidian vault
-            tmdb_api_key: TMDB API key
+            tmdb_api_key: TMDB API key (optional)
+            igdb_client_id: IGDB client ID (optional)
+            igdb_client_secret: IGDB client secret (optional)
             poster_width: Width to resize posters to (default: 200px)
         """
         self.vault_path = vault_path
         self.tmdb_api_key = tmdb_api_key
+        self.igdb_client_id = igdb_client_id
+        self.igdb_client_secret = igdb_client_secret
         self.poster_width = poster_width
         self.tmdb_base_url = "https://api.themoviedb.org/3"
 
+        # Initialize IGDB wrapper if credentials provided
+        self.igdb_wrapper = None
+        if igdb_client_id and igdb_client_secret:
+            access_token = self._get_igdb_access_token()
+            from igdb.wrapper import IGDBWrapper
+            self.igdb_wrapper = IGDBWrapper(igdb_client_id, access_token)
+
+    def _get_igdb_access_token(self) -> str:
+        """Generate OAuth2 access token from Twitch."""
+        url = "https://id.twitch.tv/oauth2/token"
+        params = {
+            'client_id': self.igdb_client_id,
+            'client_secret': self.igdb_client_secret,
+            'grant_type': 'client_credentials'
+        }
+        response = requests.post(url, params=params)
+        response.raise_for_status()
+        return response.json()['access_token']
+
     def get_media_type_from_tags(self, file_path: Path) -> Optional[str]:
         """
-        Get media type from file tags ('movie' or 'series').
+        Get media type from file tags ('movie', 'series', or 'game').
 
         Args:
             file_path: Path to markdown file
 
         Returns:
-            'movie', 'series', or None if no matching tag found
+            'movie', 'series', 'game', or None if no matching tag found
         """
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -48,6 +78,8 @@ class PosterDownloader:
                         return 'movie'
                     if 'series' in tags_lower:
                         return 'series'
+                    if 'game' in tags_lower:
+                        return 'game'
 
             # Check hashtag format
             full_content = content.lower()
@@ -55,6 +87,8 @@ class PosterDownloader:
                 return 'movie'
             if '#series' in full_content:
                 return 'series'
+            if '#game' in full_content:
+                return 'game'
 
             return None
         except Exception as e:
@@ -128,27 +162,109 @@ class PosterDownloader:
 
         return data.get('results', [])
 
-    def prompt_disambiguation(self, title: str, results: List[Dict], media_type: str) -> Optional[Dict]:
+    def search_igdb(self, title: str) -> List[Dict]:
+        """
+        Search IGDB for a game title.
+
+        Args:
+            title: Title to search for
+
+        Returns:
+            List of game results with standardized fields
+        """
+        if not self.igdb_wrapper:
+            return []
+
+        # IGDB uses Apicalypse query language
+        query = f'''
+            search "{title}";
+            fields name, first_release_date, summary, url, cover.image_id;
+            limit 10;
+        '''
+
+        try:
+            import json
+            byte_array = self.igdb_wrapper.api_request('games', query)
+            results = json.loads(byte_array.decode('utf-8'))
+            return results if isinstance(results, list) else []
+        except Exception as e:
+            print(f"❌ IGDB search error: {e}")
+            return []
+
+    def search_api(self, title: str, media_type: str) -> Tuple[List[Dict], str]:
+        """
+        Route search to appropriate API based on media type.
+
+        Args:
+            title: Title to search for
+            media_type: 'movie', 'series', or 'game'
+
+        Returns:
+            Tuple of (results, api_used) where api_used is 'tmdb' or 'igdb'
+        """
+        if media_type == 'game':
+            return self.search_igdb(title), 'igdb'
+        else:
+            return self.search_tmdb(title, media_type), 'tmdb'
+
+    def get_poster_url_from_result(self, result: Dict, api_used: str) -> Optional[str]:
+        """
+        Extract poster URL from API result.
+
+        Args:
+            result: API result dictionary
+            api_used: 'tmdb' or 'igdb'
+
+        Returns:
+            Full poster URL or None
+        """
+        if api_used == 'tmdb':
+            poster_path = result.get('poster_path')
+            if not poster_path:
+                return None
+            return f"https://image.tmdb.org/t/p/original{poster_path}"
+
+        elif api_used == 'igdb':
+            if 'cover' not in result or not result['cover']:
+                return None
+            image_id = result['cover'].get('image_id')
+            if not image_id:
+                return None
+            return f"https://images.igdb.com/igdb/image/upload/t_cover_big/{image_id}.jpg"
+
+        return None
+
+    def prompt_disambiguation(self, title: str, results: List[Dict], media_type: str, api_used: str) -> Optional[Dict]:
         """Show results and prompt user to select the correct one."""
-        emoji = '🎬' if media_type == 'movie' else '📺'
+        emoji_map = {'movie': '🎬', 'series': '📺', 'game': '🎮'}
+        emoji = emoji_map.get(media_type, '📝')
+
         print(f"\n{emoji} Multiple results found for '{title}':")
         print("-" * 80)
 
         for idx, result in enumerate(results, 1):
-            # Get title (movie uses 'title', TV uses 'name')
-            name = result.get('title') or result.get('name', 'Unknown')
+            # Extract name based on API
+            if api_used == 'igdb':
+                name = result.get('name', 'Unknown')
+                # Convert Unix timestamp to year
+                year = 'unreleased'
+                if 'first_release_date' in result:
+                    from datetime import datetime
+                    timestamp = result['first_release_date']
+                    year = str(datetime.fromtimestamp(timestamp).year)
+            else:  # tmdb
+                name = result.get('title') or result.get('name', 'Unknown')
+                year = ''
+                if 'release_date' in result and result['release_date']:
+                    year = result['release_date'][:4]
+                elif 'first_air_date' in result and result['first_air_date']:
+                    year = result['first_air_date'][:4]
 
-            # Get year
-            year = ''
-            if 'release_date' in result and result['release_date']:
-                year = result['release_date'][:4]
-            elif 'first_air_date' in result and result['first_air_date']:
-                year = result['first_air_date'][:4]
+            summary = result.get('summary' if api_used == 'igdb' else 'overview', 'No description')[:100]
 
-            overview = result.get('overview', 'No description available')[:100]
-
-            print(f"{idx}. {name} ({year})")
-            print(f"   {overview}...")
+            type_label = media_type.upper()
+            print(f"{idx}. {name} ({year}) [{type_label}]")
+            print(f"   {summary}...")
             print()
 
         print("0. Skip this file")
@@ -170,11 +286,11 @@ class PosterDownloader:
 
     def process_file(self, file_path: Path, media_type: str) -> bool:
         """
-        Process a single file: search TMDB, download poster, update frontmatter.
+        Process a single file: search API, download poster, update frontmatter.
 
         Args:
             file_path: Path to markdown file
-            media_type: 'movie' or 'series'
+            media_type: 'movie', 'series', or 'game'
 
         Returns:
             True if successful, False if skipped or failed
@@ -190,11 +306,11 @@ class PosterDownloader:
         if year:
             print(f"📅 Detected year: {year} - will use for auto-disambiguation")
 
-        # Search TMDB (without year in query)
+        # Search API (without year in query)
         try:
-            results = self.search_tmdb(title, media_type)
+            results, api_used = self.search_api(title, media_type)
         except Exception as e:
-            print(f"❌ Error searching TMDB: {e}")
+            print(f"❌ Error searching API: {e}")
             return False
 
         if not results:
@@ -217,7 +333,7 @@ class PosterDownloader:
             selected = exact_match
         # Handle disambiguation
         elif len(results) > 1:
-            selected = self.prompt_disambiguation(title, results, media_type)
+            selected = self.prompt_disambiguation(title, results, media_type, api_used)
             if selected is None:
                 print("⊘ Skipped by user")
                 return False
@@ -227,8 +343,8 @@ class PosterDownloader:
                 print(f"✓ Auto-selected the only result matching year {year}")
 
         # Check if poster is available
-        poster_path = selected.get('poster_path')
-        if not poster_path:
+        poster_url = self.get_poster_url_from_result(selected, api_used)
+        if not poster_url:
             print(f"❌ No poster available for this {media_type}")
             return False
 
@@ -238,7 +354,7 @@ class PosterDownloader:
 
         # Download and resize poster
         print(f"📥 Downloading poster...")
-        if not download_and_resize_poster(poster_path, poster_file_path, self.tmdb_api_key, self.poster_width):
+        if not download_and_resize_poster(poster_url, poster_file_path, self.poster_width):
             return False
 
         print(f"✓ Poster saved: {poster_filename}")

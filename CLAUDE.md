@@ -85,10 +85,14 @@ echo "Elden Ring" | python obsidian_media_add.py add ~/vault backup.zip --media-
 
 **Download posters for existing notes (retroactive):**
 ```bash
-# Default 200px width
+# Default: process all media types (movies, TV, games)
 python obsidian_media_add.py posters ~/vault backup.zip
 
-# Custom width
+# Filter by media type
+python obsidian_media_add.py posters ~/vault backup.zip --media-type game
+python obsidian_media_add.py posters ~/vault backup.zip --media-type movie
+
+# Custom width for all types
 python obsidian_media_add.py posters ~/vault backup.zip --width 300
 ```
 
@@ -147,10 +151,13 @@ Note: Avoids 'entertainment' tag (deprecated).
 6. Update YAML frontmatter: `poster: [[filename.jpg]]`
 
 **Standalone 'posters' command (retroactive):**
-1. Scan vault for files tagged 'movie' or 'series' without 'poster' property
-2. Extract title and year from filename
-3. Search TMDB (converts 'series' → 'tv' for API)
-4. Follow same download/resize/save workflow as above
+1. Scan vault for files tagged 'movie', 'series', or 'game' without 'poster' property
+2. Apply optional `--media-type` filter (movie, tv, game, or all)
+3. Extract title and year from filename
+4. Search appropriate API (TMDB for movie/tv, IGDB for games)
+5. Follow same download/resize/save workflow as above
+
+The 'posters' command supports `--media-type` filter to selectively process files. Default is 'all', which processes all media types but skips files that already have posters.
 
 Both workflows use shared utilities from `lib/poster_utils.py`.
 
