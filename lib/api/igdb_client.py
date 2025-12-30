@@ -86,13 +86,13 @@ class IGDBClient(MediaAPIClient):
 
         for idx, result in enumerate(results, 1):
             name = result.get('name', 'Unknown')
-            year = ''
+            year = 'unreleased'
 
             # Convert Unix timestamp to year
             if 'first_release_date' in result:
                 from datetime import datetime
                 timestamp = result['first_release_date']
-                year = datetime.fromtimestamp(timestamp).year
+                year = str(datetime.fromtimestamp(timestamp).year)
 
             summary = result.get('summary', 'No description available')[:100]
 
@@ -195,8 +195,9 @@ tags:
             timestamp = details['first_release_date']
             year = str(datetime.fromtimestamp(timestamp).year)
 
+        # Use 'unreleased' for games without a release date
         if not year:
-            raise ValueError("Could not determine release year")
+            year = 'unreleased'
 
         # Get title
         title = details.get('name', 'Unknown')

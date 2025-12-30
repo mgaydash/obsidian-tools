@@ -161,6 +161,34 @@ def find_exact_title_match(results: List[Dict], title: str, media_type: str) -> 
     return None
 
 
+def is_game_unreleased(game_result: Dict) -> bool:
+    """
+    Check if a game result is unreleased (no release date).
+
+    Args:
+        game_result: IGDB game result dictionary
+
+    Returns:
+        True if the game has no release date, False otherwise
+    """
+    return 'first_release_date' not in game_result
+
+
+def prompt_unreleased_confirmation(game_title: str) -> bool:
+    """
+    Prompt user to confirm if they want to add an unreleased game.
+
+    Args:
+        game_title: Name of the unreleased game
+
+    Returns:
+        True if user wants to add the game, False otherwise
+    """
+    print(f"⚠️  '{game_title}' appears to be unreleased (no release date)")
+    response = get_user_input("Add this unreleased game? (y/n): ").strip().lower()
+    return response == 'y'
+
+
 # Cache for genre mappings config
 _GENRE_MAPPINGS_CACHE: Optional[Dict[str, List[str]]] = None
 

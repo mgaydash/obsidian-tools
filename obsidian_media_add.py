@@ -13,7 +13,14 @@ from typing import Set
 from lib.backup import create_vault_backup
 from lib.api import MediaAPIFactory
 from lib.poster_downloader import PosterDownloader
-from lib.obsidian_utils import extract_title_and_year, filter_results_by_year, find_exact_title_match, get_user_input
+from lib.obsidian_utils import (
+    extract_title_and_year,
+    filter_results_by_year,
+    find_exact_title_match,
+    get_user_input,
+    is_game_unreleased,
+    prompt_unreleased_confirmation
+)
 from lib.poster_utils import download_and_resize_poster, update_frontmatter_with_poster
 
 
@@ -103,6 +110,12 @@ def process_title(
     # Check for exact title match
     exact_match = find_exact_title_match(results, title, media_type)
     if exact_match:
+        # For games, check if unreleased and prompt for confirmation
+        if media_type == 'game' and is_game_unreleased(exact_match):
+            game_title = exact_match.get('name', title)
+            if not prompt_unreleased_confirmation(game_title):
+                print("⊘ Skipped by user")
+                return False
         print(f"✓ Auto-selected exact title match")
         selected = exact_match
     # Handle disambiguation
