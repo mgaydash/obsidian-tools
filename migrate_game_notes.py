@@ -52,18 +52,32 @@ class PlayerMapping:
     """Manages player tag to wikilink mappings."""
 
     def __init__(self):
-        self.mappings: Dict[str, str] = {
-            'jordan': 'Jordan Godfrey'
+        # Store list of names for each tag to support multiple players per tag
+        self.mappings: Dict[str, List[str]] = {
+            'jordan': ['Jordan Godfrey']
         }
 
-    def add_mapping(self, tag: str, name: str):
-        """Add a player tag to name mapping."""
-        self.mappings[tag.lower()] = name
+    def add_mapping(self, tag: str, names: str):
+        """
+        Add a player tag to name(s) mapping.
 
-    def get_wikilink(self, tag: str) -> Optional[str]:
-        """Get wikilink for a player tag."""
-        name = self.mappings.get(tag.lower())
-        return f"[[{name}]]" if name else None
+        Args:
+            tag: The tag to map from (e.g., 'bob', 'CJK')
+            names: Single name or comma-separated names (e.g., 'Bob Smith' or 'Craig,Jon,Billy')
+        """
+        # Parse comma-separated names
+        name_list = [name.strip() for name in names.split(',') if name.strip()]
+        self.mappings[tag.lower()] = name_list
+
+    def get_wikilinks(self, tag: str) -> List[str]:
+        """
+        Get wikilinks for a player tag.
+
+        Returns:
+            List of wikilink strings (e.g., ['[[Bob Smith]]', '[[Jane Doe]]'])
+        """
+        names = self.mappings.get(tag.lower(), [])
+        return [f"[[{name}]]" for name in names]
 
     def is_player_tag(self, tag: str) -> bool:
         """Check if a tag is a player tag."""
@@ -159,9 +173,9 @@ class ObsidianNoteMigrator:
         tags_to_remove = []
         for tag in tags:
             if self.player_mapping.is_player_tag(tag):
-                wikilink = self.player_mapping.get_wikilink(tag)
-                if wikilink:
-                    player_wikilinks.add(wikilink)
+                wikilinks = self.player_mapping.get_wikilinks(tag)
+                if wikilinks:
+                    player_wikilinks.update(wikilinks)
                     tags_to_remove.append(tag)
                     changes.append(Change(
                         ChangeType.TAG_REMOVED,
@@ -453,8 +467,11 @@ Examples:
   # Process only jordan-tagged games
   python migrate_game_notes.py ~/vault backup.zip --filter-tag jordan --dry-run
 
-  # Add custom player mapping
+  # Add custom player mapping (single player)
   python migrate_game_notes.py ~/vault backup.zip --player-mapping "bob:Bob Smith" --dry-run
+
+  # Add custom player mapping (multiple players for one tag)
+  python migrate_game_notes.py ~/vault backup.zip --player-mapping "CJK:Craig Briggs,Jon O'Donnell,Billy Kenney" --dry-run
 
 Transformation Rules:
   1. Convert player tags (e.g., 'jordan') to wikilink properties
@@ -495,7 +512,7 @@ Transformation Rules:
         type=str,
         action='append',
         dest='player_mappings',
-        help='Add player tag mapping in format "tag:Full Name" (e.g., "bob:Bob Smith")'
+        help='Add player tag mapping in format "tag:Name(s)". Use comma for multiple: "CJK:Craig,Jon,Billy"'
     )
 
     parser.add_argument(
