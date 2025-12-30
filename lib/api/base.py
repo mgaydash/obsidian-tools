@@ -72,3 +72,16 @@ class MediaAPIClient(ABC):
             Sanitized filename
         """
         pass
+
+    @abstractmethod
+    def get_poster_url(self, details: Dict) -> Optional[str]:
+        """
+        Get full poster URL from media details.
+
+        Args:
+            details: Detailed information about the media item
+
+        Returns:
+            Full URL to poster image, or None if no poster available
+        """
+        pass

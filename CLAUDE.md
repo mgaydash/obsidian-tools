@@ -39,6 +39,7 @@ All API clients implement `MediaAPIClient` interface:
 - `prompt_disambiguation(title, results)` - Interactive selection
 - `format_note_content(details)` - Generate markdown
 - `get_filename(details)` - Generate "Title (Year).md" filename
+- `get_poster_url(details)` - Get full poster URL from details (returns None if no poster available)
 
 **Shared Disambiguation Logic (`lib/obsidian_utils.py`):**
 - `extract_title_and_year(input)` - Extracts year from "Title (Year)" format
@@ -48,11 +49,11 @@ All API clients implement `MediaAPIClient` interface:
 This shared logic ensures consistent behavior across both 'add' and 'posters' commands.
 
 **Shared Poster Utilities (`lib/poster_utils.py`):**
-- `download_and_resize_poster(poster_path, output_path, api_key, width)` - Downloads from TMDB, resizes, converts to JPEG
+- `download_and_resize_poster(poster_url, output_path, width)` - Downloads from any URL (TMDB, IGDB, etc.), resizes, converts to JPEG
 - `extract_yaml_frontmatter(content)` - Parses YAML frontmatter from markdown
 - `update_frontmatter_with_poster(file_path, poster_filename)` - Updates frontmatter with poster wikilink
 
-Used by both the integrated 'add' command poster download and the standalone 'posters' command to avoid code duplication.
+Used by both the integrated 'add' command poster download and the standalone 'posters' command to avoid code duplication. URL-agnostic design works with any image source.
 
 ## Commands
 
@@ -78,8 +79,8 @@ echo -e "Inception\nThe Matrix" | python obsidian_media_add.py add ~/vault backu
 python obsidian_media_add.py add ~/vault backup.zip --media-type tv --poster-width 300
 # Then paste titles and press Ctrl+D
 
-# Games (no posters - IGDB doesn't provide poster URLs)
-echo "Elden Ring" | python obsidian_media_add.py add ~/vault backup.zip --media-type game
+# Games with poster download
+echo "Elden Ring" | python obsidian_media_add.py add ~/vault backup.zip --media-type game --poster-width 200
 ```
 
 **Download posters for existing notes (retroactive):**
@@ -124,7 +125,8 @@ Both 'add' and 'posters' commands use intelligent disambiguation:
 - Uses 'name' and 'first_release_date' (Unix timestamp)
 - Returns 'involved_companies' with developer/publisher flags
 - Returns 'url' instead of external_ids
-- Does not provide poster URLs (no automatic poster download for games)
+- Returns 'cover.image_id' for poster downloads (used automatically in 'add' command)
+- Cover art downloaded using `cover_big` size (227x320) from IGDB image CDN
 
 ### Tag Detection
 
@@ -136,12 +138,13 @@ Note: Avoids 'entertainment' tag (deprecated).
 
 ### Poster Download Workflow
 
-**Integrated in 'add' command (movies/TV only):**
-1. After creating note, check if TMDB returned poster_path
-2. Download poster, resize maintaining aspect ratio to specified width (default: 200px)
-3. Convert to JPEG (quality=85)
-4. Save as "Title (Year).jpg" in same directory as note
-5. Update YAML frontmatter: `poster: [[filename.jpg]]`
+**Integrated in 'add' command (all media types):**
+1. After creating note, call `client.get_poster_url(details)` to get poster URL
+2. Download poster from URL (TMDB for movies/TV, IGDB for games)
+3. Resize maintaining aspect ratio to specified width (default: 200px)
+4. Convert to JPEG (quality=85)
+5. Save as "Title (Year).jpg" in same directory as note
+6. Update YAML frontmatter: `poster: [[filename.jpg]]`
 
 **Standalone 'posters' command (retroactive):**
 1. Scan vault for files tagged 'movie' or 'series' without 'poster' property

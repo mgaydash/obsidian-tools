@@ -9,30 +9,26 @@ from io import BytesIO
 
 
 def download_and_resize_poster(
-    poster_path: str,
+    poster_url: str,
     output_path: Path,
-    tmdb_api_key: str,
-    poster_width: int = 200
+    poster_width: int = 200,
+    tmdb_api_key: str = None
 ) -> bool:
     """
-    Download poster from TMDB, resize it, convert to JPEG.
+    Download poster from URL, resize it, convert to JPEG.
 
     Args:
-        poster_path: TMDB poster path (e.g., '/abc123.jpg')
+        poster_url: Full URL to poster image (TMDB, IGDB, or other source)
         output_path: Where to save the processed poster
-        tmdb_api_key: TMDB API key (unused but kept for consistency)
-        poster_width: Width to resize to in pixels
+        poster_width: Width to resize to in pixels (default: 200)
+        tmdb_api_key: Deprecated, kept for backward compatibility
 
     Returns:
         True if successful, False otherwise
     """
     try:
-        # TMDB image base URL
-        tmdb_image_base_url = "https://image.tmdb.org/t/p/original"
-
-        # Download the image
-        image_url = f"{tmdb_image_base_url}{poster_path}"
-        response = requests.get(image_url)
+        # Download the image from provided URL
+        response = requests.get(poster_url)
         response.raise_for_status()
 
         # Open image with PIL

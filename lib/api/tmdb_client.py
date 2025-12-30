@@ -171,3 +171,10 @@ tags:
 
         # Generate filename
         return f"{proper_title} ({year}).md"
+
+    def get_poster_url(self, details: Dict) -> Optional[str]:
+        """Get full poster URL from TMDB details."""
+        poster_path = details.get('poster_path')
+        if not poster_path:
+            return None
+        return f"https://image.tmdb.org/t/p/original{poster_path}"

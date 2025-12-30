@@ -54,7 +54,7 @@ class IGDBClient(MediaAPIClient):
         # IGDB uses Apicalypse query language
         query = f'''
             search "{title}";
-            fields name, first_release_date, summary, url, involved_companies;
+            fields name, first_release_date, summary, url, involved_companies, cover.image_id;
             limit 10;
         '''
 
@@ -68,7 +68,7 @@ class IGDBClient(MediaAPIClient):
         # Get game details with expanded company, game mode, and genre information
         query = f'''
             fields name, first_release_date, summary, url, involved_companies.company.name,
-                   involved_companies.developer, involved_companies.publisher, game_modes.name, genres.name;
+                   involved_companies.developer, involved_companies.publisher, game_modes.name, genres.name, cover.image_id;
             where id = {media_id};
         '''
         byte_array = self.wrapper.api_request('games', query)
@@ -207,3 +207,20 @@ tags:
 
         # Generate filename
         return f"{title} ({year}).md"
+
+    def get_poster_url(self, details: Dict) -> Optional[str]:
+        """
+        Get full poster URL from IGDB cover data.
+
+        Returns:
+            Full URL to poster image, or None if no cover available
+        """
+        if 'cover' not in details or not details['cover']:
+            return None
+
+        image_id = details['cover'].get('image_id')
+        if not image_id:
+            return None
+
+        # Use cover_big (227x320) for good quality at 200-300px width
+        return f"https://images.igdb.com/igdb/image/upload/t_cover_big/{image_id}.jpg"
