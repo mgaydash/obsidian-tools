@@ -10,12 +10,12 @@ import os
 import sys
 import argparse
 import yaml
-import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Set
-from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
+
+from lib.backup import create_vault_backup
 
 
 class ChangeType(Enum):
@@ -254,7 +254,7 @@ class ObsidianNoteMigrator:
                 content = f.read()
 
             # Extract frontmatter
-            frontmatter, body, original_yaml = self.extract_frontmatter(content)
+            frontmatter, body, _ = self.extract_frontmatter(content)
 
             if frontmatter is None:
                 return MigrationResult(
@@ -304,13 +304,12 @@ class ObsidianNoteMigrator:
                 error=str(e)
             )
 
-    def apply_migration(self, file_path: Path, create_backup: bool = False) -> MigrationResult:
+    def apply_migration(self, file_path: Path) -> MigrationResult:
         """
         Apply migration to a file and write changes.
 
         Args:
             file_path: Path to file to migrate
-            create_backup: Whether to create a backup before modifying
 
         Returns:
             MigrationResult
@@ -332,12 +331,6 @@ class ObsidianNoteMigrator:
             # Format new content
             new_yaml = self.format_frontmatter(updated_frontmatter)
             new_content = f"---\n{new_yaml}---{body}"
-
-            # Create backup if requested
-            if create_backup:
-                backup_path = file_path.with_suffix(f'.backup.{datetime.now().strftime("%Y%m%d_%H%M%S")}.md')
-                shutil.copy2(file_path, backup_path)
-                self.log(f"Created backup: {backup_path}")
 
             # Write new content
             with open(file_path, 'w', encoding='utf-8') as f:
@@ -367,7 +360,7 @@ class ObsidianNoteMigrator:
         game_notes = []
 
         # Walk through vault
-        for root, dirs, files in os.walk(self.vault_path):
+        for root, _dirs, files in os.walk(self.vault_path):
             # Skip Templates folder
             if 'Templates' in Path(root).parts:
                 continue
@@ -452,19 +445,16 @@ def main():
         epilog="""
 Examples:
   # Dry run to see what would change
-  python migrate_game_notes.py --dry-run
+  python migrate_game_notes.py ~/vault backup.zip --dry-run
 
-  # Actually perform migration with backups
-  python migrate_game_notes.py --backup
+  # Actually perform migration with backup
+  python migrate_game_notes.py ~/vault backup.zip
 
   # Process only jordan-tagged games
-  python migrate_game_notes.py --filter-tag jordan --dry-run
-
-  # Use different vault path
-  python migrate_game_notes.py --vault-path "/path/to/vault"
+  python migrate_game_notes.py ~/vault backup.zip --filter-tag jordan --dry-run
 
   # Add custom player mapping
-  python migrate_game_notes.py --player-mapping "bob:Bob Smith" --dry-run
+  python migrate_game_notes.py ~/vault backup.zip --player-mapping "bob:Bob Smith" --dry-run
 
 Transformation Rules:
   1. Convert player tags (e.g., 'jordan') to wikilink properties
@@ -475,22 +465,21 @@ Transformation Rules:
     )
 
     parser.add_argument(
-        '--vault-path',
+        'vault_path',
         type=str,
-        default='/Users/mgaydash/Obsidian/Sync Vault/',
-        help='Path to Obsidian vault (default: ~/Obsidian/Sync Vault/)'
+        help='Path to Obsidian vault'
+    )
+
+    parser.add_argument(
+        'backup_filename',
+        type=str,
+        help='Backup filename (e.g., backup.zip)'
     )
 
     parser.add_argument(
         '--dry-run',
         action='store_true',
         help='Show what would change without modifying files'
-    )
-
-    parser.add_argument(
-        '--backup',
-        action='store_true',
-        help='Create timestamped backups before modifying files'
     )
 
     parser.add_argument(
@@ -550,10 +539,9 @@ Transformation Rules:
     print(f"Obsidian Game Notes {mode}")
     print(f"{'=' * 80}")
     print(f"Vault: {vault_path}")
+    print(f"Backup: {args.backup_filename}")
     if args.filter_tags:
         print(f"Filter tags: {', '.join(args.filter_tags)}")
-    if args.backup and not args.dry_run:
-        print("Backups: Enabled")
     print(f"{'=' * 80}")
 
     # Find game notes
@@ -573,7 +561,11 @@ Transformation Rules:
             print("Cancelled by user")
             return
 
-    print(f"\n{'=' * 80}")
+        # Create backup before processing
+        print()
+        create_vault_backup(vault_path, args.backup_filename)
+
+    print(f"{'=' * 80}")
     print(f"{'Processing files...' if not args.dry_run else 'Analyzing files...'}")
     print(f"{'=' * 80}")
 
@@ -583,7 +575,7 @@ Transformation Rules:
         if args.dry_run:
             result = migrator.migrate_file(file_path)
         else:
-            result = migrator.apply_migration(file_path, create_backup=args.backup)
+            result = migrator.apply_migration(file_path)
 
         results.append(result)
 
@@ -599,8 +591,7 @@ Transformation Rules:
         print("   Run without --dry-run to apply changes.")
     else:
         print("\n✅ Migration complete!")
-        if args.backup:
-            print("   Backups were created with .backup.TIMESTAMP.md extension")
+        print(f"   Backup saved to: {args.backup_filename}")
 
 
 if __name__ == "__main__":
