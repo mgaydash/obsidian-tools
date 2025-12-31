@@ -7,6 +7,7 @@ Add new media notes (movies, TV shows, games) to an Obsidian vault from stdin.
 import os
 import sys
 import argparse
+import yaml
 from pathlib import Path
 from typing import Set
 
@@ -21,7 +22,7 @@ from lib.obsidian_utils import (
     is_game_unreleased,
     prompt_unreleased_confirmation
 )
-from lib.poster_utils import download_and_resize_poster, update_frontmatter_with_poster
+from lib.poster_utils import download_and_resize_poster, update_frontmatter_with_poster, extract_yaml_frontmatter
 
 
 def read_titles_from_stdin() -> list[str]:
@@ -53,6 +54,45 @@ def read_titles_from_stdin() -> list[str]:
             unique_titles.append(title)
 
     return unique_titles
+
+
+def embed_poster_in_content(file_path: Path, poster_filename: str) -> bool:
+    """
+    Embed poster image at the beginning of the file content.
+
+    Args:
+        file_path: Path to markdown file
+        poster_filename: Name of poster file (e.g., 'Movie (2020).jpg')
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        frontmatter, remaining = extract_yaml_frontmatter(content)
+
+        if not frontmatter:
+            return False
+
+        # Build new content with embed
+        # Format: ---\n{yaml}---\n\n![[poster.jpg]]\n\n{original content}
+        yaml_str = yaml.dump(frontmatter, default_flow_style=False, sort_keys=False)
+
+        # Remove leading newlines from remaining to avoid extra spacing
+        remaining_stripped = remaining.lstrip('\n')
+
+        new_content = f"---\n{yaml_str}---\n\n![[{poster_filename}]]\n\n{remaining_stripped}"
+
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+
+        return True
+
+    except Exception as e:
+        print(f"❌ Error embedding poster: {e}")
+        return False
 
 
 def process_title(
@@ -172,6 +212,11 @@ def process_title(
             print(f"✓ Poster saved: {poster_filename}")
             if update_frontmatter_with_poster(file_path, poster_filename):
                 print(f"✓ Frontmatter updated with poster wikilink")
+                # Embed the poster at the beginning of the content
+                if embed_poster_in_content(file_path, poster_filename):
+                    print(f"✓ Poster embedded in content")
+                else:
+                    print(f"⚠️  Failed to embed poster in content")
             else:
                 print(f"⚠️  Failed to update frontmatter with poster")
         else:

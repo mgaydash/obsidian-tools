@@ -186,6 +186,7 @@ Note: Avoids 'entertainment' tag (deprecated).
 4. Convert to JPEG (quality=85)
 5. Save as "Title (Year).jpg" in same directory as note
 6. Update YAML frontmatter: `poster: [[filename.jpg]]`
+7. Embed poster at beginning of content: `![[filename.jpg]]` with proper spacing
 
 **Standalone 'posters' command (retroactive):**
 1. Scan vault for files tagged 'movie', 'series', or 'game' without 'poster' property
