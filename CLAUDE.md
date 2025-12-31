@@ -117,6 +117,22 @@ This script:
 - Uses disambiguation for ambiguous titles
 - Supports `--dry-run` mode to preview changes safely
 
+**Embed posters in media notes:**
+```bash
+# Dry run to preview changes
+python embed_posters.py ~/vault --dry-run
+
+# Apply changes with backup
+python embed_posters.py ~/vault backup.zip
+```
+
+This script:
+- Finds all media notes (movie, series, game) with poster properties
+- Embeds poster images at the beginning of content (after frontmatter)
+- Format: blank line after `---`, embed `![[poster.jpg]]`, blank line, then content
+- Skips notes that already have embeds
+- One-time script for initial setup (safe to run multiple times)
+
 ### Check syntax
 ```bash
 python3 -m py_compile obsidian_media_add.py lib/*.py lib/api/*.py
