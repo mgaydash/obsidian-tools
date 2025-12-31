@@ -247,7 +247,7 @@ class PosterDownloader:
             if api_used == 'igdb':
                 name = result.get('name', 'Unknown')
                 # Convert Unix timestamp to year
-                year = 'unreleased'
+                year = 'TBD'
                 if 'first_release_date' in result:
                     from datetime import datetime
                     timestamp = result['first_release_date']

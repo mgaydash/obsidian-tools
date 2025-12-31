@@ -184,7 +184,7 @@ def prompt_unreleased_confirmation(game_title: str) -> bool:
     Returns:
         True if user wants to add the game, False otherwise
     """
-    print(f"⚠️  '{game_title}' appears to be unreleased (no release date)")
+    print(f"⚠️  '{game_title}' has no release date (TBD)")
     response = get_user_input("Add this unreleased game? (y/n): ").strip().lower()
     return response == 'y'
 
