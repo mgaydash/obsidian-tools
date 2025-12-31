@@ -381,19 +381,19 @@ def main():
         epilog="""
 Examples:
   # Add movies from stdin
-  echo -e "Inception\\nThe Matrix" | python obsidian_media_add.py add ~/vault backup.zip --media-type movie
+  echo -e "Inception\\nThe Matrix" | python obsidian_tools.py add ~/vault backup.zip --media-type movie
 
   # Add TV shows interactively
-  python obsidian_media_add.py add ~/vault backup.zip --media-type tv
+  python obsidian_tools.py add ~/vault backup.zip --media-type tv
 
   # Add games
-  echo -e "Elden Ring\\nHollow Knight" | python obsidian_media_add.py add ~/vault backup.zip --media-type game
+  echo -e "Elden Ring\\nHollow Knight" | python obsidian_tools.py add ~/vault backup.zip --media-type game
 
   # Download posters for existing notes
-  python obsidian_media_add.py posters ~/vault backup.zip
+  python obsidian_tools.py posters ~/vault backup.zip
 
   # Download posters at custom width
-  python obsidian_media_add.py posters ~/vault backup.zip --width 300
+  python obsidian_tools.py posters ~/vault backup.zip --width 300
 
 Environment Variables:
   TMDB_API_KEY          Required for movies and TV shows

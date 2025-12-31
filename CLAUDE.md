@@ -22,7 +22,7 @@ lib/                              # Shared library modules
 ├── poster_utils.py              # Shared poster download/resize utilities
 └── poster_downloader.py         # Standalone poster command implementation
 
-obsidian_media_add.py            # Main CLI with subcommands
+obsidian_tools.py                # Main CLI with subcommands
 ```
 
 ### Key Design Patterns
@@ -73,69 +73,32 @@ export IGDB_CLIENT_SECRET='your_secret'     # For games
 ```bash
 # Movies (reads from stdin, newline-separated)
 # Automatically downloads posters for movies/TV during creation
-echo -e "Inception\nThe Matrix" | python obsidian_media_add.py add ~/vault backup.zip --media-type movie
+echo -e "Inception\nThe Matrix" | python obsidian_tools.py add ~/vault backup.zip --media-type movie
 
 # TV shows with custom poster width
-python obsidian_media_add.py add ~/vault backup.zip --media-type tv --poster-width 300
+python obsidian_tools.py add ~/vault backup.zip --media-type tv --poster-width 300
 # Then paste titles and press Ctrl+D
 
 # Games with poster download
-echo "Elden Ring" | python obsidian_media_add.py add ~/vault backup.zip --media-type game --poster-width 200
+echo "Elden Ring" | python obsidian_tools.py add ~/vault backup.zip --media-type game --poster-width 200
 ```
 
 **Download posters for existing notes (retroactive):**
 ```bash
 # Default: process all media types (movies, TV, games)
-python obsidian_media_add.py posters ~/vault backup.zip
+python obsidian_tools.py posters ~/vault backup.zip
 
 # Filter by media type
-python obsidian_media_add.py posters ~/vault backup.zip --media-type game
-python obsidian_media_add.py posters ~/vault backup.zip --media-type movie
+python obsidian_tools.py posters ~/vault backup.zip --media-type game
+python obsidian_tools.py posters ~/vault backup.zip --media-type movie
 
 # Custom width for all types
-python obsidian_media_add.py posters ~/vault backup.zip --width 300
+python obsidian_tools.py posters ~/vault backup.zip --width 300
 ```
-
-**Standardize game note titles:**
-```bash
-# Dry run to preview changes
-python standardize_game_titles.py ~/vault --dry-run
-
-# Apply changes with backup
-python standardize_game_titles.py ~/vault backup.zip
-```
-
-This script:
-- Renames game notes from various formats to "Name (Year).md"
-- Handles existing formats:
-  - "Name" (no parentheses) → "Name (Year).md"
-  - "Name (Year).md" (already correct) → no change
-  - "Name (Platform).md" (e.g., iPad, PC) → "Name (Year).md"
-- Fetches release years from IGDB
-- Updates wikilinks in all notes that reference renamed files
-- Renames associated poster files and updates frontmatter
-- Uses disambiguation for ambiguous titles
-- Supports `--dry-run` mode to preview changes safely
-
-**Embed posters in media notes:**
-```bash
-# Dry run to preview changes
-python embed_posters.py ~/vault --dry-run
-
-# Apply changes with backup
-python embed_posters.py ~/vault backup.zip
-```
-
-This script:
-- Finds all media notes (movie, series, game) with poster properties
-- Embeds poster images at the beginning of content (after frontmatter)
-- Format: blank line after `---`, embed `![[poster.jpg]]`, blank line, then content
-- Skips notes that already have embeds
-- One-time script for initial setup (safe to run multiple times)
 
 ### Check syntax
 ```bash
-python3 -m py_compile obsidian_media_add.py lib/*.py lib/api/*.py
+python3 -m py_compile obsidian_tools.py lib/*.py lib/api/*.py
 ```
 
 ## Important Implementation Details
@@ -227,7 +190,7 @@ Applied to all generated filenames.
 
 ### Adding New Subcommands
 
-1. Create handler function in `obsidian_media_add.py`: `def handle_<name>_command(args):`
+1. Create handler function in `obsidian_tools.py`: `def handle_<name>_command(args):`
 2. Add subparser in `main()`:
    ```python
    parser = subparsers.add_parser('<name>', help='...')

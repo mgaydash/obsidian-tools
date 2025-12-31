@@ -33,18 +33,18 @@ Create new notes from titles (reads from stdin):
 ```bash
 # Movies
 echo -e "Inception (2010)\nThe Matrix (1999)" | \
-  python obsidian_media_add.py add ~/vault backup.zip --media-type movie
+  python obsidian_tools.py add ~/vault backup.zip --media-type movie
 
 # TV shows
 echo "Breaking Bad (2008)" | \
-  python obsidian_media_add.py add ~/vault backup.zip --media-type tv
+  python obsidian_tools.py add ~/vault backup.zip --media-type tv
 
 # Games
 echo "Elden Ring (2022)" | \
-  python obsidian_media_add.py add ~/vault backup.zip --media-type game
+  python obsidian_tools.py add ~/vault backup.zip --media-type game
 
 # Interactive mode (paste titles, then Ctrl+D)
-python obsidian_media_add.py add ~/vault backup.zip --media-type movie
+python obsidian_tools.py add ~/vault backup.zip --media-type movie
 ```
 
 ### Download Posters
@@ -53,10 +53,10 @@ Download and embed posters for existing movie/TV notes:
 
 ```bash
 # Default 200px width
-python obsidian_media_add.py posters ~/vault backup.zip
+python obsidian_tools.py posters ~/vault backup.zip
 
 # Custom width
-python obsidian_media_add.py posters ~/vault backup.zip --width 300
+python obsidian_tools.py posters ~/vault backup.zip --width 300
 ```
 
 ## Features
