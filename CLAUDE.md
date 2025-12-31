@@ -96,6 +96,27 @@ python obsidian_media_add.py posters ~/vault backup.zip --media-type movie
 python obsidian_media_add.py posters ~/vault backup.zip --width 300
 ```
 
+**Standardize game note titles:**
+```bash
+# Dry run to preview changes
+python standardize_game_titles.py ~/vault --dry-run
+
+# Apply changes with backup
+python standardize_game_titles.py ~/vault backup.zip
+```
+
+This script:
+- Renames game notes from various formats to "Name (Year).md"
+- Handles existing formats:
+  - "Name" (no parentheses) → "Name (Year).md"
+  - "Name (Year).md" (already correct) → no change
+  - "Name (Platform).md" (e.g., iPad, PC) → "Name (Year).md"
+- Fetches release years from IGDB
+- Updates wikilinks in all notes that reference renamed files
+- Renames associated poster files and updates frontmatter
+- Uses disambiguation for ambiguous titles
+- Supports `--dry-run` mode to preview changes safely
+
 ### Check syntax
 ```bash
 python3 -m py_compile obsidian_media_add.py lib/*.py lib/api/*.py
