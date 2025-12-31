@@ -1,6 +1,6 @@
-# Obsidian Media Note Manager
+# Obsidian Tools
 
-CLI tool for managing media notes (movies, TV shows, games) in Obsidian vaults. Fetches metadata from TMDB and IGDB, creates formatted notes, and downloads posters.
+Collection of CLI tools for managing and organizing media notes (movies, TV shows, games) in Obsidian vaults. Fetches metadata from TMDB and IGDB, creates formatted notes, downloads posters, and provides utilities for standardizing and enhancing your media library.
 
 ## Installation
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Standardize Game Note Titles
+Obsidian Tools - Standardize Game Note Titles
 
 Standardizes all game notes to "Name (Year).md" format by fetching release
 years from IGDB. Handles various existing formats and updates all references.

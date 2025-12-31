@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Embed Poster Images in Media Notes
+Obsidian Tools - Embed Poster Images in Media Notes
 
 One-time script to add poster image embeds at the beginning of all media notes
 that have a poster property but haven't embedded it yet.

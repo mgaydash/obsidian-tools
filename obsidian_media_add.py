@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Obsidian Media Note Manager
+Obsidian Tools - Media Note Manager
 Add new media notes (movies, TV shows, games) to an Obsidian vault from stdin.
 """
 

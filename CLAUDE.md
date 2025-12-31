@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Python-based CLI tool for managing media notes (movies, TV shows, games) in Obsidian vaults. Uses TMDB API for movies/TV and IGDB API for games to fetch metadata, create notes, and download posters.
+**Obsidian Tools** - Collection of Python-based CLI tools for managing and organizing media notes (movies, TV shows, games) in Obsidian vaults. Uses TMDB API for movies/TV and IGDB API for games to fetch metadata, create notes, download posters, and provide utilities for standardizing and enhancing your media library.
 
 ## Architecture
 
