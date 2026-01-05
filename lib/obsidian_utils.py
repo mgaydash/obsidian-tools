@@ -25,7 +25,7 @@ def extract_yaml_frontmatter(content: str) -> Tuple[Optional[Dict], str]:
 
 def sanitize_filename(title: str) -> str:
     """Sanitize title for filesystem (remove problematic characters)."""
-    return title.replace(':', ' -').replace('/', '-').replace('\\', '-')
+    return title.replace(':', ' -').replace('/', '-').replace('\\', '-').replace('?', '')
 
 
 def format_wikilink(text: str) -> str:
