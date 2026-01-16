@@ -52,10 +52,11 @@ class IGDBClient(MediaAPIClient):
     def search(self, title: str) -> List[Dict]:
         """Search IGDB for a game title."""
         # IGDB uses Apicalypse query language
+        # Use higher limit to ensure exact title matches aren't cut off (e.g., "Fate")
         query = f'''
             search "{title}";
             fields name, first_release_date, summary, url, involved_companies, cover.image_id;
-            limit 10;
+            limit 25;
         '''
 
         byte_array = self.wrapper.api_request('games', query)
