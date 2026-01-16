@@ -115,11 +115,11 @@ def filter_results_by_year(results: List[Dict], year: str, media_type: str) -> L
             elif media_type in ['tv', 'series'] and 'first_air_date' in result:
                 result_year = result['first_air_date'][:4] if result['first_air_date'] else None
         elif media_type == 'game':
-            # IGDB format - convert timestamp to year
+            # IGDB format - convert timestamp to year (use UTC to avoid timezone issues)
             if 'first_release_date' in result:
-                from datetime import datetime
+                from datetime import datetime, timezone
                 timestamp = result['first_release_date']
-                result_year = str(datetime.fromtimestamp(timestamp).year)
+                result_year = str(datetime.fromtimestamp(timestamp, tz=timezone.utc).year)
 
         if result_year == year:
             filtered.append(result)

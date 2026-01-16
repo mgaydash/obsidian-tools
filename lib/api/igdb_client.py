@@ -88,11 +88,11 @@ class IGDBClient(MediaAPIClient):
             name = result.get('name', 'Unknown')
             year = 'TBD'
 
-            # Convert Unix timestamp to year
+            # Convert Unix timestamp to year (use UTC to avoid timezone issues)
             if 'first_release_date' in result:
-                from datetime import datetime
+                from datetime import datetime, timezone
                 timestamp = result['first_release_date']
-                year = str(datetime.fromtimestamp(timestamp).year)
+                year = str(datetime.fromtimestamp(timestamp, tz=timezone.utc).year)
 
             summary = result.get('summary', 'No description available')[:100]
 
@@ -188,12 +188,12 @@ tags:
 
     def get_filename(self, details: Dict) -> str:
         """Generate filename in 'Title (Year).md' format."""
-        # Get the year
+        # Get the year (use UTC to avoid timezone issues)
         year = ''
         if 'first_release_date' in details:
-            from datetime import datetime
+            from datetime import datetime, timezone
             timestamp = details['first_release_date']
-            year = str(datetime.fromtimestamp(timestamp).year)
+            year = str(datetime.fromtimestamp(timestamp, tz=timezone.utc).year)
 
         # Use 'TBD' for games without a release date
         if not year:
