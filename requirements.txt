@@ -2,3 +2,4 @@ requests>=2.31.0
 PyYAML>=6.0.1
 Pillow>=10.0.0
 igdb-api-v4==0.3.3
+musicbrainzngs>=0.7.1

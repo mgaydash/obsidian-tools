@@ -4,6 +4,7 @@ import os
 from .base import MediaAPIClient
 from .tmdb_client import TMDBClient
 from .igdb_client import IGDBClient
+from .musicbrainz_client import MusicBrainzClient
 
 
 class MediaAPIFactory:
@@ -15,7 +16,7 @@ class MediaAPIFactory:
         Create an API client based on media type.
 
         Args:
-            media_type: 'movie', 'tv', or 'game'
+            media_type: 'movie', 'tv', 'game', or 'album'
 
         Returns:
             Appropriate MediaAPIClient instance
@@ -36,8 +37,11 @@ class MediaAPIFactory:
                 raise ValueError("IGDB_CLIENT_ID and IGDB_CLIENT_SECRET environment variables required")
             return IGDBClient(client_id, client_secret)
 
+        elif media_type == 'album':
+            return MusicBrainzClient()
+
         else:
-            raise ValueError(f"Invalid media type: {media_type}. Must be 'movie', 'tv', or 'game'")
+            raise ValueError(f"Invalid media type: {media_type}. Must be 'movie', 'tv', 'game', or 'album'")
 
 
-__all__ = ['MediaAPIClient', 'MediaAPIFactory', 'TMDBClient', 'IGDBClient']
+__all__ = ['MediaAPIClient', 'MediaAPIFactory', 'TMDBClient', 'IGDBClient', 'MusicBrainzClient']

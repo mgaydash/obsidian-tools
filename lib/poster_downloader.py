@@ -1,6 +1,7 @@
 """Poster downloader for Obsidian media notes."""
 
 import requests
+import musicbrainzngs
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from .obsidian_utils import extract_title_and_year, filter_results_by_year, find_exact_title_match, get_user_input
@@ -42,6 +43,13 @@ class PosterDownloader:
             from igdb.wrapper import IGDBWrapper
             self.igdb_wrapper = IGDBWrapper(igdb_client_id, access_token)
 
+        # Initialize MusicBrainz (no credentials needed)
+        musicbrainzngs.set_useragent(
+            "ObsidianTools",
+            "1.0",
+            "https://github.com/anthropics/obsidian-tools"
+        )
+
     def _get_igdb_access_token(self) -> str:
         """Generate OAuth2 access token from Twitch."""
         url = "https://id.twitch.tv/oauth2/token"
@@ -56,13 +64,13 @@ class PosterDownloader:
 
     def get_media_type_from_tags(self, file_path: Path) -> Optional[str]:
         """
-        Get media type from file tags ('movie', 'series', or 'game').
+        Get media type from file tags ('movie', 'series', 'game', or 'album').
 
         Args:
             file_path: Path to markdown file
 
         Returns:
-            'movie', 'series', 'game', or None if no matching tag found
+            'movie', 'series', 'game', 'album', or None if no matching tag found
         """
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -80,6 +88,8 @@ class PosterDownloader:
                         return 'series'
                     if 'game' in tags_lower:
                         return 'game'
+                    if 'album' in tags_lower:
+                        return 'album'
 
             # Check hashtag format
             full_content = content.lower()
@@ -89,6 +99,8 @@ class PosterDownloader:
                 return 'series'
             if '#game' in full_content:
                 return 'game'
+            if '#album' in full_content:
+                return 'album'
 
             return None
         except Exception as e:
@@ -114,7 +126,7 @@ class PosterDownloader:
 
     def find_media_files(self) -> List[Tuple[Path, str]]:
         """
-        Find all markdown files with movie or series tags that need posters.
+        Find all markdown files with media tags (movie, series, game, album) that need posters.
 
         Returns:
             List of tuples (file_path, media_type)
@@ -191,19 +203,67 @@ class PosterDownloader:
             print(f"❌ IGDB search error: {e}")
             return []
 
+    def search_musicbrainz(self, title: str) -> List[Dict]:
+        """
+        Search MusicBrainz for an album title.
+
+        Args:
+            title: Title to search for
+
+        Returns:
+            List of album results with standardized fields
+        """
+        try:
+            result = musicbrainzngs.search_releases(
+                release=title,
+                status='official',
+                primarytype='album',
+                limit=10
+            )
+
+            releases = result.get('release-list', [])
+
+            # Standardize the results format
+            standardized = []
+            for release in releases:
+                # Get primary artist name
+                artist_credit = release.get('artist-credit', [])
+                artist_name = 'Various Artists'
+                if artist_credit:
+                    artist_name = ' & '.join([
+                        ac.get('artist', {}).get('name', 'Unknown')
+                        for ac in artist_credit
+                        if isinstance(ac, dict) and 'artist' in ac
+                    ])
+
+                standardized.append({
+                    'id': release.get('id'),
+                    'title': release.get('title', 'Unknown'),
+                    'artist': artist_name,
+                    'date': release.get('date', ''),
+                })
+
+            return standardized
+
+        except Exception as e:
+            print(f"❌ MusicBrainz search error: {e}")
+            return []
+
     def search_api(self, title: str, media_type: str) -> Tuple[List[Dict], str]:
         """
         Route search to appropriate API based on media type.
 
         Args:
             title: Title to search for
-            media_type: 'movie', 'series', or 'game'
+            media_type: 'movie', 'series', 'game', or 'album'
 
         Returns:
-            Tuple of (results, api_used) where api_used is 'tmdb' or 'igdb'
+            Tuple of (results, api_used) where api_used is 'tmdb', 'igdb', or 'musicbrainz'
         """
         if media_type == 'game':
             return self.search_igdb(title), 'igdb'
+        elif media_type == 'album':
+            return self.search_musicbrainz(title), 'musicbrainz'
         else:
             return self.search_tmdb(title, media_type), 'tmdb'
 
@@ -213,7 +273,7 @@ class PosterDownloader:
 
         Args:
             result: API result dictionary
-            api_used: 'tmdb' or 'igdb'
+            api_used: 'tmdb', 'igdb', or 'musicbrainz'
 
         Returns:
             Full poster URL or None
@@ -232,11 +292,18 @@ class PosterDownloader:
                 return None
             return f"https://images.igdb.com/igdb/image/upload/t_cover_big/{image_id}.jpg"
 
+        elif api_used == 'musicbrainz':
+            mbid = result.get('id')
+            if not mbid:
+                return None
+            # Cover Art Archive provides direct access to front cover
+            return f"https://coverartarchive.org/release/{mbid}/front"
+
         return None
 
     def prompt_disambiguation(self, title: str, results: List[Dict], media_type: str, api_used: str) -> Optional[Dict]:
         """Show results and prompt user to select the correct one."""
-        emoji_map = {'movie': '🎬', 'series': '📺', 'game': '🎮'}
+        emoji_map = {'movie': '🎬', 'series': '📺', 'game': '🎮', 'album': '🎵'}
         emoji = emoji_map.get(media_type, '📝')
 
         print(f"\n{emoji} Multiple results found for '{title}':")
@@ -252,6 +319,13 @@ class PosterDownloader:
                     from datetime import datetime
                     timestamp = result['first_release_date']
                     year = str(datetime.fromtimestamp(timestamp).year)
+                summary = result.get('summary', 'No description')[:100]
+            elif api_used == 'musicbrainz':
+                album_title = result.get('title', 'Unknown')
+                artist = result.get('artist', 'Unknown')
+                name = f"{album_title} - {artist}"
+                year = result.get('date', 'TBD')[:4] if result.get('date') else 'TBD'
+                summary = ""  # MusicBrainz doesn't provide album descriptions
             else:  # tmdb
                 name = result.get('title') or result.get('name', 'Unknown')
                 year = ''
@@ -259,12 +333,12 @@ class PosterDownloader:
                     year = result['release_date'][:4]
                 elif 'first_air_date' in result and result['first_air_date']:
                     year = result['first_air_date'][:4]
-
-            summary = result.get('summary' if api_used == 'igdb' else 'overview', 'No description')[:100]
+                summary = result.get('overview', 'No description')[:100]
 
             type_label = media_type.upper()
             print(f"{idx}. {name} ({year}) [{type_label}]")
-            print(f"   {summary}...")
+            if summary:
+                print(f"   {summary}...")
             print()
 
         print("0. Skip this file")
@@ -290,7 +364,7 @@ class PosterDownloader:
 
         Args:
             file_path: Path to markdown file
-            media_type: 'movie', 'series', or 'game'
+            media_type: 'movie', 'series', 'game', or 'album'
 
         Returns:
             True if successful, False if skipped or failed

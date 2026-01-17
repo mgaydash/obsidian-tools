@@ -99,7 +99,7 @@ def filter_results_by_year(results: List[Dict], year: str, media_type: str) -> L
     Args:
         results: List of API search results
         year: Year to filter by (4 digits)
-        media_type: 'movie', 'tv', 'series', or 'game'
+        media_type: 'movie', 'tv', 'series', 'game', or 'album'
 
     Returns:
         Filtered list of results matching the year
@@ -120,6 +120,10 @@ def filter_results_by_year(results: List[Dict], year: str, media_type: str) -> L
                 from datetime import datetime, timezone
                 timestamp = result['first_release_date']
                 result_year = str(datetime.fromtimestamp(timestamp, tz=timezone.utc).year)
+        elif media_type == 'album':
+            # MusicBrainz date format: 'YYYY-MM-DD', 'YYYY-MM', or 'YYYY'
+            if 'date' in result:
+                result_year = result['date'][:4] if result['date'] else None
 
         if result_year == year:
             filtered.append(result)
@@ -134,7 +138,7 @@ def find_exact_title_match(results: List[Dict], title: str, media_type: str) -> 
     Args:
         results: List of API search results
         title: Title to match (case-insensitive)
-        media_type: 'movie', 'tv', 'series', or 'game'
+        media_type: 'movie', 'tv', 'series', 'game', or 'album'
 
     Returns:
         The result if exactly one exact match is found, None otherwise
@@ -151,6 +155,9 @@ def find_exact_title_match(results: List[Dict], title: str, media_type: str) -> 
         elif media_type == 'game':
             # IGDB format: uses 'name'
             result_title = result.get('name')
+        elif media_type == 'album':
+            # MusicBrainz uses 'title' field
+            result_title = result.get('title')
 
         if result_title and result_title.lower().strip() == title_lower:
             exact_matches.append(result)

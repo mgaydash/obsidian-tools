@@ -93,3 +93,55 @@ card:
 zombie:
   - zombie
   - zombies
+
+# Music genres
+rock:
+  - rock
+  - classic rock
+  - hard rock
+
+alternative:
+  - alternative
+  - alternative rock
+  - indie rock
+
+pop:
+  - pop
+  - pop rock
+
+electronic:
+  - electronic
+  - electronica
+  - edm
+
+hip-hop:
+  - hip hop
+  - hip-hop
+  - rap
+
+jazz:
+  - jazz
+  - jazz fusion
+
+metal:
+  - metal
+  - heavy metal
+
+punk:
+  - punk
+  - punk rock
+
+folk:
+  - folk
+  - folk rock
+
+classical:
+  - classical
+
+country:
+  - country
+
+progressive-rock:
+  - progressive rock
+  - prog rock
+  - prog-rock
