@@ -1,0 +1,46 @@
+{
+  "release-list": [
+    {
+      "id": "a3b7f0e5-7e7d-4e4f-8e5c-1a2b3c4d5e6f",
+      "title": "Abbey Road",
+      "status": "Official",
+      "date": "1969-09-26",
+      "country": "GB",
+      "artist-credit": [
+        {
+          "artist": {
+            "id": "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
+            "name": "The Beatles"
+          }
+        }
+      ],
+      "release-group": {
+        "id": "1c3b7f0e-1234-5678-9abc-def012345678",
+        "type": "Album",
+        "primary-type": "Album",
+        "title": "Abbey Road"
+      },
+      "tag-list": [
+        {"count": 8, "name": "rock"},
+        {"count": 5, "name": "pop"},
+        {"count": 2, "name": "psychedelic"}
+      ]
+    },
+    {
+      "id": "different-release-id",
+      "title": "Abbey Road Sessions",
+      "status": "Compilation",
+      "date": "2019-09-27",
+      "country": "US",
+      "artist-credit": [
+        {
+          "artist": {
+            "id": "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
+            "name": "The Beatles"
+          }
+        }
+      ]
+    }
+  ],
+  "release-count": 2
+}

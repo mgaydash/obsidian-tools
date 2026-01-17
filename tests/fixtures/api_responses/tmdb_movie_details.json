@@ -1,0 +1,39 @@
+{
+  "id": 27205,
+  "title": "Inception",
+  "release_date": "2010-07-16",
+  "overview": "A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O.",
+  "poster_path": "/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",
+  "runtime": 148,
+  "genres": [
+    {"id": 28, "name": "Action"},
+    {"id": 878, "name": "Science Fiction"},
+    {"id": 53, "name": "Thriller"}
+  ],
+  "credits": {
+    "cast": [
+      {
+        "id": 6193,
+        "name": "Leonardo DiCaprio",
+        "character": "Cobb",
+        "order": 0
+      },
+      {
+        "id": 24045,
+        "name": "Joseph Gordon-Levitt",
+        "character": "Arthur",
+        "order": 1
+      }
+    ],
+    "crew": [
+      {
+        "id": 525,
+        "name": "Christopher Nolan",
+        "job": "Director"
+      }
+    ]
+  },
+  "external_ids": {
+    "imdb_id": "tt1375666"
+  }
+}

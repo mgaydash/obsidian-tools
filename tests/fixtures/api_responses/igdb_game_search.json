@@ -1,0 +1,22 @@
+[
+  {
+    "id": 119277,
+    "name": "Elden Ring",
+    "first_release_date": 1645747200,
+    "summary": "A new fantasy action RPG...",
+    "cover": {
+      "id": 222795,
+      "image_id": "co4thl"
+    }
+  },
+  {
+    "id": 234567,
+    "name": "Elden Ring: Shadow of the Erdtree",
+    "first_release_date": 1718928000,
+    "summary": "DLC for Elden Ring",
+    "cover": {
+      "id": 333333,
+      "image_id": "co5xyz"
+    }
+  }
+]

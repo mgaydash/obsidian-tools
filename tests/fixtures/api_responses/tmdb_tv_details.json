@@ -1,0 +1,29 @@
+{
+  "id": 156482,
+  "name": "Loot",
+  "first_air_date": "2022-06-24",
+  "overview": "A woman whose husband suddenly dies sets out to discover what happened to the billions of dollars he left her.",
+  "poster_path": "/loot_poster.jpg",
+  "number_of_seasons": 2,
+  "number_of_episodes": 20,
+  "genres": [
+    {"id": 35, "name": "Comedy"}
+  ],
+  "created_by": [
+    {"id": 12345, "name": "Alan Yang"},
+    {"id": 12346, "name": "Matt Hubbard"}
+  ],
+  "credits": {
+    "cast": [
+      {
+        "id": 98765,
+        "name": "Maya Rudolph",
+        "character": "Molly Novak",
+        "order": 0
+      }
+    ]
+  },
+  "external_ids": {
+    "imdb_id": "tt15398010"
+  }
+}

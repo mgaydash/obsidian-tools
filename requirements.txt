@@ -3,3 +3,10 @@ PyYAML>=6.0.1
 Pillow>=10.0.0
 igdb-api-v4==0.3.3
 musicbrainzngs>=0.7.1
+
+# Testing dependencies
+pytest>=7.4.0
+pytest-mock>=3.11.1
+pytest-cov>=4.1.0
+responses>=0.23.0
+freezegun>=1.2.2

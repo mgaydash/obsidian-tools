@@ -1,0 +1,35 @@
+[
+  {
+    "id": 119277,
+    "name": "Elden Ring",
+    "first_release_date": 1645747200,
+    "summary": "A new fantasy action RPG. Arise, Tarnished, and be guided by grace to brandish the power of the Elden Ring.",
+    "genres": [
+      {"id": 12, "name": "Role-playing (RPG)"},
+      {"id": 31, "name": "Adventure"}
+    ],
+    "involved_companies": [
+      {
+        "id": 123,
+        "company": {"id": 207, "name": "FromSoftware"},
+        "developer": true,
+        "publisher": false
+      },
+      {
+        "id": 124,
+        "company": {"id": 465, "name": "Bandai Namco Entertainment"},
+        "developer": false,
+        "publisher": true
+      }
+    ],
+    "url": "https://www.igdb.com/games/elden-ring",
+    "game_modes": [
+      {"id": 1, "name": "Single player"},
+      {"id": 2, "name": "Multiplayer"}
+    ],
+    "cover": {
+      "id": 222795,
+      "image_id": "co4thl"
+    }
+  }
+]
