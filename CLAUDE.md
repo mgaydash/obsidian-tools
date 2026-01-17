@@ -2,6 +2,30 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Maintaining This File
+
+**IMPORTANT: Keep CLAUDE.md synchronized with the codebase.**
+
+When making changes to the project, you MUST update this file if:
+- Adding new commands, features, or API clients
+- Changing project architecture or design patterns
+- Modifying existing workflows or behavior
+- Adding new dependencies or requirements
+- Updating testing patterns or requirements
+- Changing file structure or organization
+- Discovering new edge cases or important implementation details
+- Adding new common patterns that future developers should follow
+
+Update the relevant sections immediately after implementing changes. This ensures CLAUDE.md remains an accurate reference for future development work. Treat CLAUDE.md updates as part of the feature implementation, not an afterthought.
+
+**Example:** If you add a new API client for books, update:
+1. Code Structure diagram (add bookdb_client.py)
+2. Factory Pattern section (add 'book' media type)
+3. Commands section (add book examples)
+4. Common Patterns → Adding New API Clients (verify instructions are still correct)
+5. Environment Variables (add any new required keys)
+6. Testing section (document any new testing patterns for books API)
+
 ## Project Overview
 
 **Obsidian Tools** - Collection of Python-based CLI tools for managing and organizing media notes (movies, TV shows, games) in Obsidian vaults. Uses TMDB API for movies/TV and IGDB API for games to fetch metadata, create notes, download posters, and provide utilities for standardizing and enhancing your media library.
