@@ -16,11 +16,20 @@ lib/                              # Shared library modules
 │   ├── __init__.py              # MediaAPIFactory for routing
 │   ├── base.py                  # Abstract MediaAPIClient interface
 │   ├── tmdb_client.py           # TMDB implementation (movies/TV)
-│   └── igdb_client.py           # IGDB implementation (games)
+│   ├── igdb_client.py           # IGDB implementation (games)
+│   └── musicbrainz_client.py    # MusicBrainz implementation (albums)
 ├── backup.py                    # Vault backup utilities
 ├── obsidian_utils.py            # YAML, wikilinks, year extraction, disambiguation
 ├── poster_utils.py              # Shared poster download/resize utilities
 └── poster_downloader.py         # Standalone poster command implementation
+
+tests/                            # Test suite (88% coverage, 266 tests)
+├── conftest.py                  # Shared test fixtures
+├── fixtures/                    # Test data (JSON, images, markdown)
+├── unit/                        # Unit tests (~3,100 lines)
+│   ├── api/                     # API client tests
+│   └── test_*.py                # Module tests
+└── integration/                 # Integration tests (future)
 
 obsidian_tools.py                # Main CLI with subcommands
 ```
@@ -100,6 +109,177 @@ python obsidian_tools.py posters ~/vault backup.zip --width 300
 ```bash
 python3 -m py_compile obsidian_tools.py lib/*.py lib/api/*.py
 ```
+
+## Testing
+
+### Overview
+
+The project has comprehensive test coverage with **266 test cases** achieving **88% code coverage**. All tests must pass before committing changes.
+
+**Test Structure:**
+```
+tests/
+├── conftest.py                      # Shared fixtures
+├── pytest.ini                       # Test configuration
+├── fixtures/                        # Test data
+│   └── api_responses/*.json        # Mock API responses
+├── unit/                            # Unit tests (~3,100 lines)
+│   ├── test_obsidian_utils.py     # Core utilities (100+ tests)
+│   ├── test_poster_utils.py       # Poster download/resize
+│   ├── test_backup.py             # Backup functionality
+│   ├── test_poster_downloader.py  # Poster command workflow
+│   ├── api/
+│   │   ├── test_factory.py        # MediaAPIFactory routing
+│   │   ├── test_tmdb_client.py    # TMDB client (movies/TV)
+│   │   ├── test_igdb_client.py    # IGDB client (games)
+│   │   └── test_musicbrainz_client.py  # MusicBrainz client (albums)
+│   └── test_cli.py                # CLI argument parsing
+└── integration/                    # Integration tests (future)
+```
+
+### Running Tests
+
+```bash
+# Run all tests with coverage
+pytest
+
+# Run specific test file
+pytest tests/unit/test_obsidian_utils.py -v
+
+# Run only unit tests (fast)
+pytest tests/unit/ -m unit
+
+# Generate HTML coverage report
+pytest --cov=lib --cov-report=html
+# Open htmlcov/index.html to view
+
+# Run tests without coverage (faster)
+pytest --no-cov
+
+# Quick summary without verbose output
+pytest tests/unit/ --tb=no -q
+```
+
+### Writing Tests - CRITICAL REQUIREMENTS
+
+**⚠️ MANDATORY: All new features and bug fixes MUST include tests.**
+
+When adding or modifying code:
+
+1. **New Features** - Write tests BEFORE or immediately after implementation:
+   - Add unit tests for all new functions/methods
+   - Test happy path AND edge cases
+   - Mock external dependencies (APIs, file I/O)
+   - Aim for 95%+ coverage on new code
+
+2. **Bug Fixes** - Write a failing test first:
+   - Create test that reproduces the bug
+   - Verify test fails
+   - Fix the bug
+   - Verify test passes
+   - This prevents regressions
+
+3. **Refactoring** - Ensure all existing tests still pass:
+   - Run full test suite before refactoring
+   - Run tests frequently during refactoring
+   - Update tests if behavior intentionally changes
+   - Do NOT delete tests to make refactoring easier
+
+4. **API Client Changes** - Update corresponding test fixtures:
+   - Modify JSON fixtures in `tests/fixtures/api_responses/`
+   - Add @responses.activate decorator for HTTP mocking
+   - Test OAuth flows for authenticated APIs (IGDB)
+
+### Critical Testing Patterns
+
+**HTTP Mocking (responses library):**
+```python
+import responses
+
+@responses.activate
+def test_tmdb_search():
+    responses.add(
+        responses.GET,
+        'https://api.themoviedb.org/3/search/movie',
+        json={'results': [...]},
+        status=200
+    )
+    # Test code that makes HTTP request
+```
+
+**OAuth Mocking (IGDB):**
+```python
+@responses.activate
+def test_igdb_feature():
+    # Mock OAuth token request FIRST
+    responses.add(
+        responses.POST,
+        'https://id.twitch.tv/oauth2/token',
+        json={'access_token': 'test_token'},
+        status=200
+    )
+    # Then test IGDB functionality
+```
+
+**Time-Sensitive Tests (freezegun):**
+```python
+from freezegun import freeze_time
+
+@freeze_time("2024-01-15 12:00:00", tz_offset=0)
+def test_igdb_timestamp_conversion():
+    # Test UTC timezone handling for IGDB timestamps
+```
+
+**Parametrized Tests (multiple inputs):**
+```python
+@pytest.mark.parametrize("input,expected", [
+    ("Title (2020)", "Title"),
+    ("Title", "Title"),
+    ("Title (20XX)", "Title (20XX)"),
+])
+def test_extract_title(input, expected):
+    assert extract_title_and_year(input)[0] == expected
+```
+
+### Test Coverage Requirements
+
+| Module | Target | Status |
+|--------|--------|--------|
+| Core utilities (obsidian_utils.py) | 95%+ | 87% |
+| API clients (api/*.py) | 95%+ | 95-100% ✓ |
+| Poster utilities (poster_utils.py) | 95%+ | 94% |
+| Backup (backup.py) | 100% | 100% ✓ |
+| **Overall Project** | **95%** | **88%** |
+
+### Edge Cases That MUST Be Tested
+
+- **UTC Timezone Handling** - IGDB timestamps must use UTC (not local timezone)
+- **Image Format Conversion** - RGBA → RGB, PNG → JPEG, grayscale, palette modes
+- **Date Format Variations** - TMDB (YYYY-MM-DD), IGDB (Unix timestamp), MusicBrainz (YYYY, YYYY-MM, YYYY-MM-DD)
+- **Year-Based Disambiguation** - "Title (2020)" auto-filtering
+- **Missing Optional Fields** - Developer, publisher, director, creator = "Unknown" (not "[[Unknown]]")
+- **URL Encoding** - Handle %2C and other encoded characters
+- **YAML Frontmatter** - Incomplete (no closing ---), malformed, empty
+- **Filename Sanitization** - Colons, slashes, question marks, special characters
+
+### Test Maintenance
+
+**Before Committing:**
+```bash
+# Verify all tests pass
+pytest
+
+# Check coverage hasn't decreased
+pytest --cov=lib --cov-report=term
+
+# Fix any failing tests - DO NOT commit with failing tests
+```
+
+**Common Issues:**
+- **HTTP 400 errors** - Missing OAuth mock for IGDB tests
+- **Assertion failures** - Check for YAML quoting: `poster: '[[file.jpg]]'` not `poster: [[file.jpg]]`
+- **Timezone failures** - Use `freeze_time` with `tz_offset=0` for UTC tests
+- **Import errors** - Ensure test imports match actual module structure
 
 ## Important Implementation Details
 
@@ -197,6 +377,8 @@ Applied to all generated filenames.
    parser.add_argument(...)
    ```
 3. Route in main: `if args.command == '<name>': handle_<name>_command(args)`
+4. **REQUIRED:** Add tests in `tests/test_cli.py` for argument parsing
+5. **REQUIRED:** Add integration tests for command workflow
 
 ### Adding New API Clients
 
@@ -204,10 +386,21 @@ Applied to all generated filenames.
 2. Implement `MediaAPIClient` abstract methods
 3. Add to factory in `lib/api/__init__.py`
 4. Update `media_type` choices in CLI arguments
+5. **REQUIRED:** Create comprehensive test file `tests/unit/api/test_<name>_client.py`:
+   - Mock all HTTP requests with `@responses.activate`
+   - Test search, get_details, format_note_content, get_filename, get_poster_url
+   - Test edge cases: missing fields, API errors, date format handling
+   - Add API response fixtures in `tests/fixtures/api_responses/`
+   - Aim for 95%+ coverage
 
 ### Extending Disambiguation Logic
 
 Shared logic in `lib/obsidian_utils.py` used by all commands. Modify `find_exact_title_match()` or `filter_results_by_year()` to affect both 'add' and 'posters' commands simultaneously.
+
+**REQUIRED:** When modifying these functions, update tests in `tests/unit/test_obsidian_utils.py`:
+- Test all media types (movie, tv, game, album)
+- Test date format variations (especially IGDB Unix timestamps with UTC)
+- Add parametrized tests for edge cases
 
 ### Working with Poster Utilities
 
@@ -223,3 +416,8 @@ if download_and_resize_poster(poster_path, output_file, tmdb_api_key, width):
 ```
 
 Both the integrated 'add' command and standalone 'posters' command use these utilities. Any changes to poster download logic should be made in `poster_utils.py` to benefit both workflows.
+
+**REQUIRED:** When modifying poster utilities, update tests in `tests/unit/test_poster_utils.py`:
+- Test all image formats (RGB, RGBA, grayscale, palette)
+- Test YAML frontmatter updates (with quotes: `poster: '[[file.jpg]]'`)
+- Mock HTTP requests with `@responses.activate`
