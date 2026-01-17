@@ -260,10 +260,10 @@ def translate_genre_tag(genre: str) -> str:
 
     # No mapping found - sanitize the genre
     # Convert to lowercase and replace spaces/special chars with hyphens
-    sanitized = re.sub(r'[^\w\s-]', '', genre_lower)  # Remove special chars except spaces and hyphens
-    sanitized = re.sub(r'[\s_]+', '-', sanitized)     # Replace spaces/underscores with hyphens
-    sanitized = re.sub(r'-+', '-', sanitized)         # Collapse multiple hyphens
-    sanitized = sanitized.strip('-')                   # Remove leading/trailing hyphens
+    sanitized = re.sub(r'[^\w\s-]', ' ', genre_lower)  # Convert special chars to spaces (preserves word boundaries)
+    sanitized = re.sub(r'[\s_]+', '-', sanitized)      # Replace spaces/underscores with hyphens
+    sanitized = re.sub(r'-+', '-', sanitized)          # Collapse multiple hyphens
+    sanitized = sanitized.strip('-')                    # Remove leading/trailing hyphens
 
     result = sanitized if sanitized else 'unknown'
 

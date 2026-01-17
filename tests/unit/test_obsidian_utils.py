@@ -68,11 +68,11 @@ year: 2020
 
 
 def test_extract_yaml_frontmatter_incomplete():
-    """Test incomplete frontmatter (missing closing ---)."""
+    """Test incomplete frontmatter (missing closing delimiter)."""
     content = """---
 title: Test Movie
 tags: [movie]
-# Content without closing ---
+# Content without closing delimiter
 """
     frontmatter, remaining = extract_yaml_frontmatter(content)
 

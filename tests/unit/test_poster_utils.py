@@ -403,7 +403,7 @@ def test_update_frontmatter_with_poster_existing_yaml(tmp_path, sample_markdown_
 
     # Read and verify
     content = file_path.read_text()
-    assert 'poster: [[Test Movie (2020).jpg]]' in content
+    assert "poster: '[[Test Movie (2020).jpg]]'" in content
     assert 'title: Test Movie' in content
     assert 'tags:' in content
 
@@ -420,7 +420,7 @@ def test_update_frontmatter_with_poster_no_yaml(tmp_path, sample_markdown_withou
     # Read and verify frontmatter was added
     content = file_path.read_text()
     assert content.startswith('---')
-    assert 'poster: [[poster.jpg]]' in content
+    assert "poster: '[[poster.jpg]]'" in content
 
 
 def test_update_frontmatter_with_poster_replaces_existing(tmp_path):
@@ -441,7 +441,7 @@ poster: [[old_poster.jpg]]
 
     # Verify poster was replaced
     new_content = file_path.read_text()
-    assert 'poster: [[new_poster.jpg]]' in new_content
+    assert "poster: '[[new_poster.jpg]]'" in new_content
     assert '[[old_poster.jpg]]' not in new_content
 
 
@@ -485,4 +485,4 @@ def test_update_frontmatter_with_poster_malformed_yaml(tmp_path, sample_markdown
 
     # Should have created valid YAML
     content = file_path.read_text()
-    assert 'poster: [[poster.jpg]]' in content
+    assert "poster: '[[poster.jpg]]'" in content
