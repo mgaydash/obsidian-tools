@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Obsidian Tools - Media Note Manager
-Add new media notes (movies, TV shows, games, albums) to an Obsidian vault from stdin.
+Add new media notes (movies, TV shows, games, albums, books) to an Obsidian vault from stdin.
 """
 
 import os
@@ -110,7 +110,7 @@ def process_title(
         client: MediaAPIClient instance
         vault_path: Path to Obsidian vault
         title_input: Title to search for (may include year in parentheses)
-        media_type: Type of media ('movie', 'tv', 'game', or 'album')
+        media_type: Type of media ('movie', 'tv', 'game', 'album', or 'book')
         poster_width: Width to resize posters to (default: 200px)
 
     Returns:
@@ -249,10 +249,12 @@ def handle_add_command(args):
         print("  export IGDB_CLIENT_SECRET='your_client_secret'")
         print("\nFor MusicBrainz (albums):")
         print("  No credentials needed!")
+        print("\nFor Open Library (books):")
+        print("  No credentials needed!")
         sys.exit(1)
 
     # Print header
-    media_emoji = {'movie': '🎬', 'tv': '📺', 'game': '🎮', 'album': '🎵'}
+    media_emoji = {'movie': '🎬', 'tv': '📺', 'game': '🎮', 'album': '🎵', 'book': '📚'}
     print(f"{media_emoji.get(args.media_type, '📝')} Obsidian Media Note Manager - Add {args.media_type.title()}s")
     print("=" * 80)
     print(f"Vault: {vault_path}")
@@ -294,6 +296,9 @@ def handle_add_command(args):
         # Rate limiting for MusicBrainz API (max 1 request/second)
         if args.media_type == 'album':
             time.sleep(1.1)
+        # Be polite to Open Library: small pause between books
+        elif args.media_type == 'book':
+            time.sleep(0.5)
 
     # Summary
     print("\n" + "=" * 80)
@@ -399,6 +404,9 @@ Examples:
   # Add albums
   echo "Dark Side of the Moon (1973)" | python obsidian_tools.py add ~/vault backup.zip --media-type album
 
+  # Add books
+  echo -e "Dune\nThe Hobbit (1937)" | python obsidian_tools.py add ~/vault backup.zip --media-type book
+
   # Download posters for existing notes (all media types)
   python obsidian_tools.py posters ~/vault backup.zip
 
@@ -413,6 +421,7 @@ Environment Variables:
   IGDB_CLIENT_ID        Required for games (Twitch application client ID)
   IGDB_CLIENT_SECRET    Required for games (Twitch application client secret)
   MusicBrainz (albums)  No credentials needed!
+  Open Library (books)  No credentials needed!
         """
     )
 
@@ -429,7 +438,7 @@ Environment Variables:
     add_parser.add_argument(
         '--media-type',
         required=True,
-        choices=['movie', 'tv', 'game', 'album'],
+        choices=['movie', 'tv', 'game', 'album', 'book'],
         help='Type of media to add'
     )
     add_parser.add_argument(
@@ -455,7 +464,7 @@ Environment Variables:
     )
     posters_parser.add_argument(
         '--media-type',
-        choices=['all', 'movie', 'tv', 'game', 'album'],
+        choices=['all', 'movie', 'tv', 'game', 'album', 'book'],
         default='all',
         help='Filter by media type (default: all)'
     )

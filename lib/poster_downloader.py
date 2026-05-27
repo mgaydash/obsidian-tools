@@ -64,13 +64,13 @@ class PosterDownloader:
 
     def get_media_type_from_tags(self, file_path: Path) -> Optional[str]:
         """
-        Get media type from file tags ('movie', 'series', 'game', or 'album').
+        Get media type from file tags ('movie', 'series', 'game', 'album', or 'book').
 
         Args:
             file_path: Path to markdown file
 
         Returns:
-            'movie', 'series', 'game', 'album', or None if no matching tag found
+            'movie', 'series', 'game', 'album', 'book', or None if no matching tag found
         """
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -90,6 +90,8 @@ class PosterDownloader:
                         return 'game'
                     if 'album' in tags_lower:
                         return 'album'
+                    if 'book' in tags_lower:
+                        return 'book'
 
             # Check hashtag format
             full_content = content.lower()
@@ -101,6 +103,8 @@ class PosterDownloader:
                 return 'game'
             if '#album' in full_content:
                 return 'album'
+            if '#book' in full_content:
+                return 'book'
 
             return None
         except Exception as e:
@@ -203,6 +207,44 @@ class PosterDownloader:
             print(f"❌ IGDB search error: {e}")
             return []
 
+    def search_openlibrary(self, title: str) -> List[Dict]:
+        """
+        Search Open Library for a book title.
+
+        Args:
+            title: Title to search for
+
+        Returns:
+            List of book results with standardized fields
+        """
+        try:
+            url = "https://openlibrary.org/search.json"
+            response = requests.get(url, params={'title': title, 'limit': 25}, timeout=15)
+            response.raise_for_status()
+            data = response.json()
+
+            standardized = []
+            for doc in data.get('docs', []):
+                work_key = doc.get('key', '')
+                work_id = work_key.replace('/works/', '') if work_key.startswith('/works/') else work_key
+
+                authors = doc.get('author_name', []) or []
+                author = ' & '.join(authors) if authors else 'Unknown'
+
+                standardized.append({
+                    'id': work_id,
+                    'title': doc.get('title', 'Unknown'),
+                    'author': author,
+                    'first_publish_year': doc.get('first_publish_year'),
+                    'cover_id': doc.get('cover_i'),
+                })
+
+            return standardized
+
+        except Exception as e:
+            print(f"❌ Open Library search error: {e}")
+            return []
+
     def search_musicbrainz(self, title: str) -> List[Dict]:
         """
         Search MusicBrainz for an album title.
@@ -255,15 +297,18 @@ class PosterDownloader:
 
         Args:
             title: Title to search for
-            media_type: 'movie', 'series', 'game', or 'album'
+            media_type: 'movie', 'series', 'game', 'album', or 'book'
 
         Returns:
-            Tuple of (results, api_used) where api_used is 'tmdb', 'igdb', or 'musicbrainz'
+            Tuple of (results, api_used) where api_used is 'tmdb', 'igdb', 'musicbrainz',
+            or 'openlibrary'
         """
         if media_type == 'game':
             return self.search_igdb(title), 'igdb'
         elif media_type == 'album':
             return self.search_musicbrainz(title), 'musicbrainz'
+        elif media_type == 'book':
+            return self.search_openlibrary(title), 'openlibrary'
         else:
             return self.search_tmdb(title, media_type), 'tmdb'
 
@@ -299,11 +344,17 @@ class PosterDownloader:
             # Cover Art Archive provides direct access to front cover
             return f"https://coverartarchive.org/release/{mbid}/front"
 
+        elif api_used == 'openlibrary':
+            cover_id = result.get('cover_id')
+            if not cover_id:
+                return None
+            return f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg"
+
         return None
 
     def prompt_disambiguation(self, title: str, results: List[Dict], media_type: str, api_used: str) -> Optional[Dict]:
         """Show results and prompt user to select the correct one."""
-        emoji_map = {'movie': '🎬', 'series': '📺', 'game': '🎮', 'album': '🎵'}
+        emoji_map = {'movie': '🎬', 'series': '📺', 'game': '🎮', 'album': '🎵', 'book': '📚'}
         emoji = emoji_map.get(media_type, '📝')
 
         print(f"\n{emoji} Multiple results found for '{title}':")
@@ -326,6 +377,12 @@ class PosterDownloader:
                 name = f"{album_title} - {artist}"
                 year = result.get('date', 'TBD')[:4] if result.get('date') else 'TBD'
                 summary = ""  # MusicBrainz doesn't provide album descriptions
+            elif api_used == 'openlibrary':
+                book_title = result.get('title', 'Unknown')
+                author = result.get('author', 'Unknown')
+                name = f"{book_title} - {author}"
+                year = str(result.get('first_publish_year') or 'TBD')
+                summary = ""
             else:  # tmdb
                 name = result.get('title') or result.get('name', 'Unknown')
                 year = ''

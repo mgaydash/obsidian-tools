@@ -1,0 +1,14 @@
+{
+  "title": "Dune",
+  "key": "/works/OL893415W",
+  "authors": [
+    {
+      "author": {"key": "/authors/OL233422A"},
+      "type": {"key": "/type/author_role"}
+    }
+  ],
+  "description": "Set on the desert planet Arrakis, Dune is the story of the boy Paul Atreides, heir to a noble family tasked with ruling an inhospitable world where the only thing of value is the spice melange.",
+  "covers": [8739161, 8739162],
+  "subjects": ["Science fiction", "Fiction", "Politics and government"],
+  "first_publish_date": "1965"
+}

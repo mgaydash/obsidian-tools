@@ -5,6 +5,7 @@ from .base import MediaAPIClient
 from .tmdb_client import TMDBClient
 from .igdb_client import IGDBClient
 from .musicbrainz_client import MusicBrainzClient
+from .openlibrary_client import OpenLibraryClient
 
 
 class MediaAPIFactory:
@@ -16,7 +17,7 @@ class MediaAPIFactory:
         Create an API client based on media type.
 
         Args:
-            media_type: 'movie', 'tv', 'game', or 'album'
+            media_type: 'movie', 'tv', 'game', 'album', or 'book'
 
         Returns:
             Appropriate MediaAPIClient instance
@@ -40,8 +41,18 @@ class MediaAPIFactory:
         elif media_type == 'album':
             return MusicBrainzClient()
 
+        elif media_type == 'book':
+            return OpenLibraryClient()
+
         else:
-            raise ValueError(f"Invalid media type: {media_type}. Must be 'movie', 'tv', 'game', or 'album'")
+            raise ValueError(f"Invalid media type: {media_type}. Must be 'movie', 'tv', 'game', 'album', or 'book'")
 
 
-__all__ = ['MediaAPIClient', 'MediaAPIFactory', 'TMDBClient', 'IGDBClient', 'MusicBrainzClient']
+__all__ = [
+    'MediaAPIClient',
+    'MediaAPIFactory',
+    'TMDBClient',
+    'IGDBClient',
+    'MusicBrainzClient',
+    'OpenLibraryClient',
+]

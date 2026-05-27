@@ -386,6 +386,46 @@ def test_find_exact_title_match_album():
     assert match['title'] == 'Abbey Road'
 
 
+def test_find_exact_title_match_book():
+    """Test exact title match for books."""
+    results = [
+        {'title': 'Dune', 'first_publish_year': 1965},
+        {'title': 'Dune Messiah', 'first_publish_year': 1969},
+    ]
+    match = find_exact_title_match(results, 'Dune', 'book')
+
+    assert match is not None
+    assert match['title'] == 'Dune'
+
+
+# ============================================================================
+# Tests for filter_results_by_year - Open Library (books)
+# ============================================================================
+
+@pytest.mark.parametrize("year_value,year,should_match", [
+    (1965, "1965", True),
+    (1969, "1965", False),
+    (None, "1965", False),
+])
+def test_filter_results_by_year_book(year_value, year, should_match):
+    """Test filtering books by first_publish_year (int)."""
+    results = [{'title': 'Dune', 'first_publish_year': year_value}]
+    filtered = filter_results_by_year(results, year, 'book')
+
+    if should_match:
+        assert len(filtered) == 1
+    else:
+        assert len(filtered) == 0
+
+
+def test_filter_results_by_year_book_missing_year():
+    """Books with no first_publish_year should not match any year."""
+    results = [{'title': 'Mystery Book'}]
+    filtered = filter_results_by_year(results, '2020', 'book')
+
+    assert len(filtered) == 0
+
+
 # ============================================================================
 # Tests for is_game_unreleased
 # ============================================================================

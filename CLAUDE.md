@@ -28,7 +28,7 @@ Update the relevant sections immediately after implementing changes. This ensure
 
 ## Project Overview
 
-**Obsidian Tools** - Collection of Python-based CLI tools for managing and organizing media notes (movies, TV shows, games) in Obsidian vaults. Uses TMDB API for movies/TV and IGDB API for games to fetch metadata, create notes, download posters, and provide utilities for standardizing and enhancing your media library.
+**Obsidian Tools** - Collection of Python-based CLI tools for managing and organizing media notes (movies, TV shows, games, albums, books) in Obsidian vaults. Uses TMDB API for movies/TV, IGDB API for games, MusicBrainz for albums, and Open Library for books to fetch metadata, create notes, download cover art, and provide utilities for standardizing and enhancing your media library.
 
 ## Architecture
 
@@ -41,7 +41,8 @@ lib/                              # Shared library modules
 │   ├── base.py                  # Abstract MediaAPIClient interface
 │   ├── tmdb_client.py           # TMDB implementation (movies/TV)
 │   ├── igdb_client.py           # IGDB implementation (games)
-│   └── musicbrainz_client.py    # MusicBrainz implementation (albums)
+│   ├── musicbrainz_client.py    # MusicBrainz implementation (albums)
+│   └── openlibrary_client.py    # Open Library implementation (books)
 ├── backup.py                    # Vault backup utilities
 ├── obsidian_utils.py            # YAML, wikilinks, year extraction, disambiguation
 ├── poster_utils.py              # Shared poster download/resize utilities
@@ -62,8 +63,9 @@ obsidian_tools.py                # Main CLI with subcommands
 
 **Factory Pattern (`lib/api/__init__.py`):**
 - `MediaAPIFactory.create_client(media_type)` routes to appropriate API client
-- Returns TMDB client for 'movie'/'tv', IGDB client for 'game'
+- Returns TMDB client for 'movie'/'tv', IGDB client for 'game', MusicBrainz for 'album', Open Library for 'book'
 - Validates environment variables (TMDB_API_KEY, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET)
+- MusicBrainz and Open Library require no credentials
 
 **Abstract Base Class (`lib/api/base.py`):**
 All API clients implement `MediaAPIClient` interface:
@@ -114,6 +116,9 @@ python obsidian_tools.py add ~/vault backup.zip --media-type tv --poster-width 3
 
 # Games with poster download
 echo "Elden Ring" | python obsidian_tools.py add ~/vault backup.zip --media-type game --poster-width 200
+
+# Books (no API key required)
+echo -e "Dune\nThe Hobbit (1937)" | python obsidian_tools.py add ~/vault backup.zip --media-type book
 ```
 
 **Download posters for existing notes (retroactive):**
@@ -336,9 +341,19 @@ Both 'add' and 'posters' commands use intelligent disambiguation:
 - Returns 'cover.image_id' for poster downloads (used automatically in 'add' command)
 - Cover art downloaded using `cover_big` size (227x320) from IGDB image CDN
 
+**Open Library (books):**
+- Search endpoint: `https://openlibrary.org/search.json?title=...` (no API key)
+- Standardized search result fields: `id` (work ID, e.g. 'OL27448W'), `title`, `author` (joined with ' & '), `first_publish_year` (int), `cover_id`, `subjects`
+- Work details: `https://openlibrary.org/works/{work_id}.json` — descriptions may be `str` or `{'type': '/type/text', 'value': str}`
+- Author lookup: separate request per `/authors/{id}.json` reference, joined with ' & '
+- Year fallback: if work's `first_publish_date` is missing, fetches `/works/{id}/editions.json` and uses earliest `publish_date` year
+- Covers downloaded from `https://covers.openlibrary.org/b/id/{cover_id}-L.jpg` (returns None when work has no cover)
+- Filename format: `Author - Title (Year).md` (matches album convention, since duplicate book titles by different authors are common)
+- Tag: `book` (singular)
+
 ### Tag Detection
 
-Scripts search for 'movie' or 'series' tags in:
+Scripts search for `movie`, `series`, `game`, `album`, or `book` tags in:
 1. YAML frontmatter: `tags: [movie]`
 2. Hashtag format: `#movie`
 
@@ -390,6 +405,10 @@ Applied to all generated filenames.
 - `IGDB_CLIENT_SECRET` - Twitch application client secret
 - Setup: https://api-docs.igdb.com/#getting-started
 
+**Albums (MusicBrainz):** No credentials required.
+
+**Books (Open Library):** No credentials required.
+
 ## Common Patterns
 
 ### Adding New Subcommands
@@ -422,8 +441,8 @@ Applied to all generated filenames.
 Shared logic in `lib/obsidian_utils.py` used by all commands. Modify `find_exact_title_match()` or `filter_results_by_year()` to affect both 'add' and 'posters' commands simultaneously.
 
 **REQUIRED:** When modifying these functions, update tests in `tests/unit/test_obsidian_utils.py`:
-- Test all media types (movie, tv, game, album)
-- Test date format variations (especially IGDB Unix timestamps with UTC)
+- Test all media types (movie, tv, game, album, book)
+- Test date format variations (especially IGDB Unix timestamps with UTC and Open Library's int `first_publish_year`)
 - Add parametrized tests for edge cases
 
 ### Working with Poster Utilities

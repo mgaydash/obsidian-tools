@@ -4,7 +4,7 @@ import pytest
 import os
 import responses
 
-from lib.api import MediaAPIFactory, TMDBClient, IGDBClient, MusicBrainzClient
+from lib.api import MediaAPIFactory, TMDBClient, IGDBClient, MusicBrainzClient, OpenLibraryClient
 
 
 # ============================================================================
@@ -48,6 +48,13 @@ def test_create_client_album():
     client = MediaAPIFactory.create_client('album')
 
     assert isinstance(client, MusicBrainzClient)
+
+
+def test_create_client_book():
+    """Test creating Open Library client for books (no credentials needed)."""
+    client = MediaAPIFactory.create_client('book')
+
+    assert isinstance(client, OpenLibraryClient)
 
 
 # ============================================================================
@@ -109,7 +116,6 @@ def test_create_client_game_missing_both_credentials(clear_env_vars):
 
 @pytest.mark.parametrize("invalid_type", [
     'music',
-    'book',
     'podcast',
     'series',  # Should use 'tv' not 'series'
     '',
@@ -213,6 +219,14 @@ def test_musicbrainz_client_properties():
     assert isinstance(client, MusicBrainzClient)
 
 
+def test_openlibrary_client_properties():
+    """Test Open Library client has correct properties."""
+    client = MediaAPIFactory.create_client('book')
+
+    # Open Library client doesn't need credentials
+    assert isinstance(client, OpenLibraryClient)
+
+
 # ============================================================================
 # Tests for multiple client creation
 # ============================================================================
@@ -232,17 +246,20 @@ def test_create_multiple_different_clients(set_mock_env):
     tv_client = MediaAPIFactory.create_client('tv')
     game_client = MediaAPIFactory.create_client('game')
     album_client = MediaAPIFactory.create_client('album')
+    book_client = MediaAPIFactory.create_client('book')
 
     # All should be different instances
     assert movie_client is not tv_client
     assert movie_client is not game_client
     assert movie_client is not album_client
+    assert movie_client is not book_client
 
     # All should be correct types
     assert isinstance(movie_client, TMDBClient)
     assert isinstance(tv_client, TMDBClient)
     assert isinstance(game_client, IGDBClient)
     assert isinstance(album_client, MusicBrainzClient)
+    assert isinstance(book_client, OpenLibraryClient)
 
 
 def test_create_same_type_multiple_times(set_mock_env):

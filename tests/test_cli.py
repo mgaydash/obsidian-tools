@@ -123,7 +123,7 @@ def test_parse_args_add_movie(monkeypatch):
     add_parser = subparsers.add_parser('add')
     add_parser.add_argument('vault_path')
     add_parser.add_argument('backup_filename')
-    add_parser.add_argument('--media-type', required=True, choices=['movie', 'tv', 'game', 'album'])
+    add_parser.add_argument('--media-type', required=True, choices=['movie', 'tv', 'game', 'album', 'book'])
     add_parser.add_argument('--poster-width', type=int, default=200)
 
     args = parser.parse_args(['add', '/path/to/vault', 'backup.zip', '--media-type', 'movie'])
@@ -145,7 +145,7 @@ def test_parse_args_add_custom_width(monkeypatch):
     add_parser = subparsers.add_parser('add')
     add_parser.add_argument('vault_path')
     add_parser.add_argument('backup_filename')
-    add_parser.add_argument('--media-type', required=True, choices=['movie', 'tv', 'game', 'album'])
+    add_parser.add_argument('--media-type', required=True, choices=['movie', 'tv', 'game', 'album', 'book'])
     add_parser.add_argument('--poster-width', type=int, default=200)
 
     args = parser.parse_args(['add', '/path/to/vault', 'backup.zip', '--media-type', 'tv', '--poster-width', '300'])
@@ -164,7 +164,7 @@ def test_parse_args_add_missing_media_type():
     add_parser = subparsers.add_parser('add')
     add_parser.add_argument('vault_path')
     add_parser.add_argument('backup_filename')
-    add_parser.add_argument('--media-type', required=True, choices=['movie', 'tv', 'game', 'album'])
+    add_parser.add_argument('--media-type', required=True, choices=['movie', 'tv', 'game', 'album', 'book'])
 
     with pytest.raises(SystemExit):
         args = parser.parse_args(['add', '/path/to/vault', 'backup.zip'])
@@ -180,10 +180,10 @@ def test_parse_args_add_invalid_media_type():
     add_parser = subparsers.add_parser('add')
     add_parser.add_argument('vault_path')
     add_parser.add_argument('backup_filename')
-    add_parser.add_argument('--media-type', required=True, choices=['movie', 'tv', 'game', 'album'])
+    add_parser.add_argument('--media-type', required=True, choices=['movie', 'tv', 'game', 'album', 'book'])
 
     with pytest.raises(SystemExit):
-        args = parser.parse_args(['add', '/path/to/vault', 'backup.zip', '--media-type', 'book'])
+        args = parser.parse_args(['add', '/path/to/vault', 'backup.zip', '--media-type', 'podcast'])
 
 
 # ============================================================================
@@ -201,7 +201,7 @@ def test_parse_args_posters_default():
     posters_parser.add_argument('vault_path')
     posters_parser.add_argument('backup_filename')
     posters_parser.add_argument('--width', type=int, default=200)
-    posters_parser.add_argument('--media-type', choices=['all', 'movie', 'tv', 'game', 'album'], default='all')
+    posters_parser.add_argument('--media-type', choices=['all', 'movie', 'tv', 'game', 'album', 'book'], default='all')
 
     args = parser.parse_args(['posters', '/path/to/vault', 'backup.zip'])
 
@@ -223,7 +223,7 @@ def test_parse_args_posters_custom_width():
     posters_parser.add_argument('vault_path')
     posters_parser.add_argument('backup_filename')
     posters_parser.add_argument('--width', type=int, default=200)
-    posters_parser.add_argument('--media-type', choices=['all', 'movie', 'tv', 'game', 'album'], default='all')
+    posters_parser.add_argument('--media-type', choices=['all', 'movie', 'tv', 'game', 'album', 'book'], default='all')
 
     args = parser.parse_args(['posters', '/path/to/vault', 'backup.zip', '--width', '300'])
 
@@ -241,7 +241,7 @@ def test_parse_args_posters_media_type_filter():
     posters_parser.add_argument('vault_path')
     posters_parser.add_argument('backup_filename')
     posters_parser.add_argument('--width', type=int, default=200)
-    posters_parser.add_argument('--media-type', choices=['all', 'movie', 'tv', 'game', 'album'], default='all')
+    posters_parser.add_argument('--media-type', choices=['all', 'movie', 'tv', 'game', 'album', 'book'], default='all')
 
     args = parser.parse_args(['posters', '/path/to/vault', 'backup.zip', '--media-type', 'album'])
 
@@ -258,10 +258,10 @@ def test_parse_args_posters_invalid_media_type():
     posters_parser = subparsers.add_parser('posters')
     posters_parser.add_argument('vault_path')
     posters_parser.add_argument('backup_filename')
-    posters_parser.add_argument('--media-type', choices=['all', 'movie', 'tv', 'game', 'album'], default='all')
+    posters_parser.add_argument('--media-type', choices=['all', 'movie', 'tv', 'game', 'album', 'book'], default='all')
 
     with pytest.raises(SystemExit):
-        args = parser.parse_args(['posters', '/path/to/vault', 'backup.zip', '--media-type', 'book'])
+        args = parser.parse_args(['posters', '/path/to/vault', 'backup.zip', '--media-type', 'podcast'])
 
 
 # ============================================================================
@@ -300,10 +300,10 @@ def test_add_command_media_type_choices():
     add_parser = subparsers.add_parser('add')
     add_parser.add_argument('vault_path')
     add_parser.add_argument('backup_filename')
-    add_parser.add_argument('--media-type', required=True, choices=['movie', 'tv', 'game', 'album'])
+    add_parser.add_argument('--media-type', required=True, choices=['movie', 'tv', 'game', 'album', 'book'])
 
     # Test all valid choices
-    for media_type in ['movie', 'tv', 'game', 'album']:
+    for media_type in ['movie', 'tv', 'game', 'album', 'book']:
         args = parser.parse_args(['add', '/vault', 'backup.zip', '--media-type', media_type])
         assert args.media_type == media_type
 
@@ -318,10 +318,10 @@ def test_posters_command_media_type_choices():
     posters_parser = subparsers.add_parser('posters')
     posters_parser.add_argument('vault_path')
     posters_parser.add_argument('backup_filename')
-    posters_parser.add_argument('--media-type', choices=['all', 'movie', 'tv', 'game', 'album'], default='all')
+    posters_parser.add_argument('--media-type', choices=['all', 'movie', 'tv', 'game', 'album', 'book'], default='all')
 
     # Test all valid choices
-    for media_type in ['all', 'movie', 'tv', 'game', 'album']:
+    for media_type in ['all', 'movie', 'tv', 'game', 'album', 'book']:
         args = parser.parse_args(['posters', '/vault', 'backup.zip', '--media-type', media_type])
         assert args.media_type == media_type
 

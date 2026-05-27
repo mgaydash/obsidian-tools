@@ -163,6 +163,32 @@ tags: [album, rock]
     assert media_type == 'album'
 
 
+def test_get_media_type_from_yaml_book(poster_downloader_tmdb, tmp_path):
+    """Test detecting book tag from YAML frontmatter."""
+    file = tmp_path / 'test.md'
+    file.write_text("""---
+tags: [book, fiction]
+---
+
+# Content
+""")
+
+    media_type = poster_downloader_tmdb.get_media_type_from_tags(file)
+    assert media_type == 'book'
+
+
+def test_get_media_type_from_hashtag_book(poster_downloader_tmdb, tmp_path):
+    """Test detecting book from hashtag format."""
+    file = tmp_path / 'test.md'
+    file.write_text("""# Title
+
+A great #book I read.
+""")
+
+    media_type = poster_downloader_tmdb.get_media_type_from_tags(file)
+    assert media_type == 'book'
+
+
 def test_get_media_type_case_insensitive(poster_downloader_tmdb, tmp_path):
     """Test that tag detection is case insensitive."""
     file = tmp_path / 'test.md'
@@ -519,6 +545,79 @@ def test_get_poster_url_from_result_musicbrainz_missing(poster_downloader_tmdb):
     url = poster_downloader_tmdb.get_poster_url_from_result(result, 'musicbrainz')
 
     assert url is None
+
+
+def test_get_poster_url_from_result_openlibrary(poster_downloader_tmdb):
+    """Test extracting cover URL from Open Library result."""
+    result = {'cover_id': 8739161}
+
+    url = poster_downloader_tmdb.get_poster_url_from_result(result, 'openlibrary')
+
+    assert url == 'https://covers.openlibrary.org/b/id/8739161-L.jpg'
+
+
+def test_get_poster_url_from_result_openlibrary_missing(poster_downloader_tmdb):
+    """Test Open Library result without a cover_id."""
+    result = {'title': 'No Cover'}
+
+    url = poster_downloader_tmdb.get_poster_url_from_result(result, 'openlibrary')
+
+    assert url is None
+
+
+@responses.activate
+def test_search_openlibrary(poster_downloader_tmdb):
+    """Test searching Open Library for a book."""
+    responses.add(
+        responses.GET,
+        'https://openlibrary.org/search.json',
+        json={'docs': [{
+            'key': '/works/OL1W',
+            'title': 'Dune',
+            'author_name': ['Frank Herbert'],
+            'first_publish_year': 1965,
+            'cover_i': 42,
+        }]},
+        status=200,
+    )
+
+    results = poster_downloader_tmdb.search_openlibrary('Dune')
+
+    assert len(results) == 1
+    assert results[0]['id'] == 'OL1W'
+    assert results[0]['title'] == 'Dune'
+    assert results[0]['author'] == 'Frank Herbert'
+    assert results[0]['cover_id'] == 42
+
+
+@responses.activate
+def test_search_openlibrary_error_returns_empty(poster_downloader_tmdb):
+    """Search errors should yield an empty list, not raise."""
+    responses.add(
+        responses.GET,
+        'https://openlibrary.org/search.json',
+        status=500,
+    )
+
+    results = poster_downloader_tmdb.search_openlibrary('Dune')
+
+    assert results == []
+
+
+@responses.activate
+def test_search_api_routes_book_to_openlibrary(poster_downloader_tmdb):
+    """Book searches should route to Open Library."""
+    responses.add(
+        responses.GET,
+        'https://openlibrary.org/search.json',
+        json={'docs': []},
+        status=200,
+    )
+
+    results, api_used = poster_downloader_tmdb.search_api('Dune', 'book')
+
+    assert api_used == 'openlibrary'
+    assert results == []
 
 
 # ============================================================================
