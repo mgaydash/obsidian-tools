@@ -258,13 +258,14 @@ def handle_add_command(args):
     print(f"{media_emoji.get(args.media_type, '📝')} Obsidian Media Note Manager - Add {args.media_type.title()}s")
     print("=" * 80)
     print(f"Vault: {vault_path}")
-    print(f"Backup: {args.backup_filename}")
+    print(f"Backup: {args.backup_filename if args.backup_filename else 'disabled'}")
     print(f"Media Type: {args.media_type}")
     print(f"Poster width: {args.poster_width}px")
     print("=" * 80)
 
-    # Create backup
-    create_vault_backup(vault_path, args.backup_filename)
+    # Create backup (only when requested via -b/--backup)
+    if args.backup_filename:
+        create_vault_backup(vault_path, args.backup_filename)
 
     # Read titles from stdin
     titles = read_titles_from_stdin()
@@ -306,7 +307,8 @@ def handle_add_command(args):
     print("=" * 80)
     print(f"✓ Created: {created_count}")
     print(f"⊘ Skipped/Failed: {failed_count}")
-    print(f"📦 Backup: {args.backup_filename}")
+    if args.backup_filename:
+        print(f"📦 Backup: {args.backup_filename}")
     print("\n✅ Done!")
 
 
@@ -328,7 +330,7 @@ def handle_posters_command(args):
     print("🖼️  Obsidian Media Note Manager - Download Posters")
     print("=" * 80)
     print(f"Vault: {vault_path}")
-    print(f"Backup: {args.backup_filename}")
+    print(f"Backup: {args.backup_filename if args.backup_filename else 'disabled'}")
     print(f"Media type filter: {args.media_type}")
     print(f"Poster width: {args.width}px")
     print("=" * 80)
@@ -342,8 +344,9 @@ def handle_posters_command(args):
         poster_width=args.width
     )
 
-    # Create backup
-    create_vault_backup(vault_path, args.backup_filename)
+    # Create backup (only when requested via -b/--backup)
+    if args.backup_filename:
+        create_vault_backup(vault_path, args.backup_filename)
 
     # Find media files
     print("\n🔍 Scanning for media files...")
@@ -381,7 +384,8 @@ def handle_posters_command(args):
     print("=" * 80)
     print(f"✓ Processed: {processed_count}")
     print(f"⊘ Skipped: {skipped_count}")
-    print(f"📦 Backup: {args.backup_filename}")
+    if args.backup_filename:
+        print(f"📦 Backup: {args.backup_filename}")
     print("\n✅ Done!")
 
 
@@ -392,29 +396,29 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Add movies from stdin
-  echo -e "Inception\\nThe Matrix" | python obsidian_tools.py add ~/vault backup.zip --media-type movie
+  # Add movies from stdin (no backup)
+  echo -e "Inception\\nThe Matrix" | python obsidian_tools.py add ~/vault --media-type movie
 
   # Add TV shows interactively
-  python obsidian_tools.py add ~/vault backup.zip --media-type tv
+  python obsidian_tools.py add ~/vault --media-type tv
 
-  # Add games
-  echo -e "Elden Ring\\nHollow Knight" | python obsidian_tools.py add ~/vault backup.zip --media-type game
+  # Add games, backing up the vault first
+  echo -e "Elden Ring\\nHollow Knight" | python obsidian_tools.py add ~/vault --media-type game -b backup.zip
 
   # Add albums
-  echo "Dark Side of the Moon (1973)" | python obsidian_tools.py add ~/vault backup.zip --media-type album
+  echo "Dark Side of the Moon (1973)" | python obsidian_tools.py add ~/vault --media-type album
 
   # Add books
-  echo -e "Dune\nThe Hobbit (1937)" | python obsidian_tools.py add ~/vault backup.zip --media-type book
+  echo -e "Dune\nThe Hobbit (1937)" | python obsidian_tools.py add ~/vault --media-type book
 
   # Download posters for existing notes (all media types)
-  python obsidian_tools.py posters ~/vault backup.zip
+  python obsidian_tools.py posters ~/vault
 
   # Download posters at custom width
-  python obsidian_tools.py posters ~/vault backup.zip --width 300
+  python obsidian_tools.py posters ~/vault --width 300
 
-  # Download posters for specific media type only
-  python obsidian_tools.py posters ~/vault backup.zip --media-type album
+  # Download posters, backing up the vault first
+  python obsidian_tools.py posters ~/vault --media-type album -b backup.zip
 
 Environment Variables:
   TMDB_API_KEY          Required for movies and TV shows
@@ -434,12 +438,19 @@ Environment Variables:
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     add_parser.add_argument('vault_path', help='Path to Obsidian vault')
-    add_parser.add_argument('backup_filename', help='Backup filename (e.g., backup.zip)')
     add_parser.add_argument(
         '--media-type',
         required=True,
         choices=['movie', 'tv', 'game', 'album', 'book'],
         help='Type of media to add'
+    )
+    add_parser.add_argument(
+        '-b', '--backup',
+        dest='backup_filename',
+        metavar='FILE',
+        default=None,
+        help='Back up the vault to FILE (e.g., backup.zip) before adding notes. '
+             'Backup is skipped when omitted.'
     )
     add_parser.add_argument(
         '--poster-width',
@@ -455,7 +466,14 @@ Environment Variables:
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     posters_parser.add_argument('vault_path', help='Path to Obsidian vault')
-    posters_parser.add_argument('backup_filename', help='Backup filename (e.g., backup.zip)')
+    posters_parser.add_argument(
+        '-b', '--backup',
+        dest='backup_filename',
+        metavar='FILE',
+        default=None,
+        help='Back up the vault to FILE (e.g., backup.zip) before downloading posters. '
+             'Backup is skipped when omitted.'
+    )
     posters_parser.add_argument(
         '--width',
         type=int,

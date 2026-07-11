@@ -108,30 +108,36 @@ export IGDB_CLIENT_SECRET='your_secret'     # For games
 ```bash
 # Movies (reads from stdin, newline-separated)
 # Automatically downloads posters for movies/TV during creation
-echo -e "Inception\nThe Matrix" | python obsidian_tools.py add ~/vault backup.zip --media-type movie
+echo -e "Inception\nThe Matrix" | python obsidian_tools.py add ~/vault --media-type movie
 
 # TV shows with custom poster width
-python obsidian_tools.py add ~/vault backup.zip --media-type tv --poster-width 300
+python obsidian_tools.py add ~/vault --media-type tv --poster-width 300
 # Then paste titles and press Ctrl+D
 
 # Games with poster download
-echo "Elden Ring" | python obsidian_tools.py add ~/vault backup.zip --media-type game --poster-width 200
+echo "Elden Ring" | python obsidian_tools.py add ~/vault --media-type game --poster-width 200
 
 # Books (no API key required)
-echo -e "Dune\nThe Hobbit (1937)" | python obsidian_tools.py add ~/vault backup.zip --media-type book
+echo -e "Dune\nThe Hobbit (1937)" | python obsidian_tools.py add ~/vault --media-type book
+
+# Back up the vault before adding (optional, off by default)
+echo "Inception" | python obsidian_tools.py add ~/vault --media-type movie -b backup.zip
 ```
 
 **Download posters for existing notes (retroactive):**
 ```bash
 # Default: process all media types (movies, TV, games)
-python obsidian_tools.py posters ~/vault backup.zip
+python obsidian_tools.py posters ~/vault
 
 # Filter by media type
-python obsidian_tools.py posters ~/vault backup.zip --media-type game
-python obsidian_tools.py posters ~/vault backup.zip --media-type movie
+python obsidian_tools.py posters ~/vault --media-type game
+python obsidian_tools.py posters ~/vault --media-type movie
 
 # Custom width for all types
-python obsidian_tools.py posters ~/vault backup.zip --width 300
+python obsidian_tools.py posters ~/vault --width 300
+
+# Back up the vault before downloading (optional, off by default)
+python obsidian_tools.py posters ~/vault -b backup.zip
 ```
 
 ### Check syntax
@@ -394,6 +400,10 @@ Replaces problematic characters:
 - `/` and `\` → `-`
 
 Applied to all generated filenames.
+
+### Vault Backup
+
+Backup is **opt-in** on both the `add` and `posters` commands via the `-b/--backup FILE` option (`args.backup_filename`, defaults to `None`). When the flag is omitted, the header prints `Backup: disabled`, `create_vault_backup()` is not called, and the summary omits the backup line. When a path is provided, the vault is zipped to that path before any notes are created/modified. There is no positional backup argument.
 
 ## Environment Variables
 
