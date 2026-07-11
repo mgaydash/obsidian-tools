@@ -10,11 +10,12 @@ import argparse
 import yaml
 import time
 from pathlib import Path
-from typing import Set
+from typing import Optional, Set
 
 from lib.backup import create_vault_backup
 from lib.api import MediaAPIFactory
 from lib.poster_downloader import PosterDownloader
+from lib.config import get_config_path, get_value, load_config, set_value
 from lib.obsidian_utils import (
     extract_title_and_year,
     filter_results_by_year,
@@ -24,6 +25,16 @@ from lib.obsidian_utils import (
     prompt_unreleased_confirmation
 )
 from lib.poster_utils import download_and_resize_poster, update_frontmatter_with_poster, extract_yaml_frontmatter
+
+
+def resolve_vault_path(cli_value: Optional[str]) -> Optional[Path]:
+    """Resolve the vault path from the CLI arg, falling back to saved config.
+
+    Returns an expanded Path, or None if neither a CLI value nor a configured
+    vault_path is available.
+    """
+    value = cli_value or get_value('vault_path')
+    return Path(value).expanduser() if value else None
 
 
 def read_titles_from_stdin() -> list[str]:
@@ -230,9 +241,13 @@ def process_title(
 
 def handle_add_command(args):
     """Handle the 'add' subcommand."""
-    vault_path = Path(args.vault_path)
+    vault_path = resolve_vault_path(args.vault_path)
 
     # Validate vault path
+    if vault_path is None:
+        print("❌ No vault path provided. Pass one as an argument or save one with:")
+        print("     obsidian-tools configure --vault-path <path>")
+        sys.exit(1)
     if not vault_path.is_dir():
         print(f"❌ Vault path does not exist: {vault_path}")
         sys.exit(1)
@@ -314,9 +329,13 @@ def handle_add_command(args):
 
 def handle_posters_command(args):
     """Handle the 'posters' subcommand."""
-    vault_path = Path(args.vault_path)
+    vault_path = resolve_vault_path(args.vault_path)
 
     # Validate vault path
+    if vault_path is None:
+        print("❌ No vault path provided. Pass one as an argument or save one with:")
+        print("     obsidian-tools configure --vault-path <path>")
+        sys.exit(1)
     if not vault_path.is_dir():
         print(f"❌ Vault path does not exist: {vault_path}")
         sys.exit(1)
@@ -389,6 +408,49 @@ def handle_posters_command(args):
     print("\n✅ Done!")
 
 
+def handle_configure_command(args):
+    """Handle the 'configure' subcommand: save persistent settings."""
+    config_path = get_config_path()
+
+    # --show: print the current configuration and exit
+    if args.show:
+        config = load_config()
+        if not config:
+            print(f"No configuration saved yet ({config_path})")
+            return
+        print(f"Configuration ({config_path}):")
+        for key in sorted(config):
+            print(f"  {key}: {config[key]}")
+        return
+
+    # Determine the vault path: from --vault-path or an interactive prompt
+    vault_path = args.vault_path
+    if vault_path is None:
+        current = load_config().get('vault_path')
+        prompt = f"Vault path [{current}]: " if current else "Vault path: "
+        try:
+            entered = get_user_input(prompt).strip()
+        except EOFError:
+            print("❌ No input received")
+            sys.exit(1)
+        if not entered:
+            if current:
+                print("✓ Keeping existing vault path")
+                return
+            print("❌ No vault path provided")
+            sys.exit(1)
+        vault_path = entered
+
+    # Validate before persisting
+    expanded = Path(vault_path).expanduser()
+    if not expanded.is_dir():
+        print(f"❌ Vault path does not exist or is not a directory: {expanded}")
+        sys.exit(1)
+
+    saved_path = set_value('vault_path', str(expanded))
+    print(f"✓ Saved vault_path to {saved_path}")
+
+
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -396,29 +458,33 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Add movies from stdin (no backup)
-  echo -e "Inception\\nThe Matrix" | python obsidian_tools.py add ~/vault --media-type movie
+  # Save a default vault path once, then omit it in later commands
+  python obsidian_tools.py configure --vault-path ~/vault
+  python obsidian_tools.py configure --show
 
-  # Add TV shows interactively
-  python obsidian_tools.py add ~/vault --media-type tv
+  # Add movies from stdin (uses the configured vault path)
+  echo -e "Inception\\nThe Matrix" | python obsidian_tools.py add --media-type movie
+
+  # Add TV shows interactively, to an explicit vault (overrides the saved one)
+  python obsidian_tools.py add ~/other-vault --media-type tv
 
   # Add games, backing up the vault first
-  echo -e "Elden Ring\\nHollow Knight" | python obsidian_tools.py add ~/vault --media-type game -b backup.zip
+  echo -e "Elden Ring\\nHollow Knight" | python obsidian_tools.py add --media-type game -b backup.zip
 
   # Add albums
-  echo "Dark Side of the Moon (1973)" | python obsidian_tools.py add ~/vault --media-type album
+  echo "Dark Side of the Moon (1973)" | python obsidian_tools.py add --media-type album
 
   # Add books
-  echo -e "Dune\nThe Hobbit (1937)" | python obsidian_tools.py add ~/vault --media-type book
+  echo -e "Dune\nThe Hobbit (1937)" | python obsidian_tools.py add --media-type book
 
   # Download posters for existing notes (all media types)
-  python obsidian_tools.py posters ~/vault
+  python obsidian_tools.py posters
 
   # Download posters at custom width
-  python obsidian_tools.py posters ~/vault --width 300
+  python obsidian_tools.py posters --width 300
 
   # Download posters, backing up the vault first
-  python obsidian_tools.py posters ~/vault --media-type album -b backup.zip
+  python obsidian_tools.py posters --media-type album -b backup.zip
 
 Environment Variables:
   TMDB_API_KEY          Required for movies and TV shows
@@ -437,7 +503,13 @@ Environment Variables:
         help='Add new media notes from stdin',
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    add_parser.add_argument('vault_path', help='Path to Obsidian vault')
+    add_parser.add_argument(
+        'vault_path',
+        nargs='?',
+        default=None,
+        help='Path to Obsidian vault (defaults to the configured vault_path; '
+             'set one with "configure --vault-path")'
+    )
     add_parser.add_argument(
         '--media-type',
         required=True,
@@ -465,7 +537,13 @@ Environment Variables:
         help='Download posters for existing movie and series notes',
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    posters_parser.add_argument('vault_path', help='Path to Obsidian vault')
+    posters_parser.add_argument(
+        'vault_path',
+        nargs='?',
+        default=None,
+        help='Path to Obsidian vault (defaults to the configured vault_path; '
+             'set one with "configure --vault-path")'
+    )
     posters_parser.add_argument(
         '-b', '--backup',
         dest='backup_filename',
@@ -487,6 +565,24 @@ Environment Variables:
         help='Filter by media type (default: all)'
     )
 
+    # 'configure' subcommand
+    configure_parser = subparsers.add_parser(
+        'configure',
+        help='Save persistent settings (e.g., the default vault path)',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    configure_parser.add_argument(
+        '--vault-path',
+        dest='vault_path',
+        default=None,
+        help='Vault path to save as the default; prompts interactively if omitted'
+    )
+    configure_parser.add_argument(
+        '--show',
+        action='store_true',
+        help='Print the saved configuration and exit'
+    )
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -505,6 +601,8 @@ Environment Variables:
         handle_add_command(args)
     elif args.command == 'posters':
         handle_posters_command(args)
+    elif args.command == 'configure':
+        handle_configure_command(args)
 
 
 if __name__ == "__main__":

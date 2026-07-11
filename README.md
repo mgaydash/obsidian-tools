@@ -32,18 +32,33 @@ export IGDB_CLIENT_SECRET='your_client_secret'
 Get TMDB API key: https://www.themoviedb.org/ (Settings > API)
 Get IGDB credentials: https://api-docs.igdb.com/#getting-started
 
+### Configure a default vault (optional)
+
+Save your vault path once so you can omit it from every command:
+
+```bash
+obsidian-tools configure --vault-path ~/vault
+obsidian-tools configure --show          # print saved settings
+obsidian-tools configure                 # prompt interactively
+```
+
+Settings are stored at `~/.config/obsidian-tools/config.json` (respecting
+`XDG_CONFIG_HOME`). After configuring, the vault path is optional on `add` and
+`posters`; passing one explicitly always overrides the saved value.
+
 ## Usage
 
 ### Add Media Notes
 
-Create new notes from titles (reads from stdin):
+Create new notes from titles (reads from stdin). These use the configured vault
+path; pass a path explicitly to override it:
 
 ```bash
-# Movies
+# Movies (uses the configured vault path)
 echo -e "Inception (2010)\nThe Matrix (1999)" | \
-  obsidian-tools add ~/vault --media-type movie
+  obsidian-tools add --media-type movie
 
-# TV shows
+# TV shows, to an explicit vault
 echo "Breaking Bad (2008)" | \
   obsidian-tools add ~/vault --media-type tv
 

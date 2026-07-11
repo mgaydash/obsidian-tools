@@ -108,7 +108,7 @@ def build_add_parser():
     subparsers = parser.add_subparsers(dest='command', required=True)
 
     add_parser = subparsers.add_parser('add')
-    add_parser.add_argument('vault_path')
+    add_parser.add_argument('vault_path', nargs='?', default=None)
     add_parser.add_argument('--media-type', required=True, choices=['movie', 'tv', 'game', 'album', 'book'])
     add_parser.add_argument('-b', '--backup', dest='backup_filename', default=None)
     add_parser.add_argument('--poster-width', type=int, default=200)
@@ -181,7 +181,7 @@ def build_posters_parser():
     subparsers = parser.add_subparsers(dest='command', required=True)
 
     posters_parser = subparsers.add_parser('posters')
-    posters_parser.add_argument('vault_path')
+    posters_parser.add_argument('vault_path', nargs='?', default=None)
     posters_parser.add_argument('-b', '--backup', dest='backup_filename', default=None)
     posters_parser.add_argument('--width', type=int, default=200)
     posters_parser.add_argument('--media-type', choices=['all', 'movie', 'tv', 'game', 'album', 'book'], default='all')
@@ -403,3 +403,171 @@ def test_posters_command_creates_backup_when_requested(tmp_path, monkeypatch):
     obsidian_tools.handle_posters_command(args)
 
     backup_mock.assert_called_once_with(Path(str(tmp_path)), backup_path)
+
+
+# ============================================================================
+# Tests for optional vault_path parsing (add / posters)
+# ============================================================================
+
+def test_parse_args_add_vault_optional():
+    """add: vault_path may be omitted (falls back to config at runtime)."""
+    parser = build_add_parser()
+    args = parser.parse_args(['add', '--media-type', 'movie'])
+    assert args.vault_path is None
+    assert args.media_type == 'movie'
+
+
+def test_parse_args_posters_vault_optional():
+    """posters: vault_path may be omitted (falls back to config at runtime)."""
+    parser = build_posters_parser()
+    args = parser.parse_args(['posters'])
+    assert args.vault_path is None
+
+
+# ============================================================================
+# Tests for argument parsing - 'configure' command
+# ============================================================================
+
+def build_configure_parser():
+    """Build a parser mirroring the 'configure' subcommand in obsidian_tools.main()."""
+    from argparse import ArgumentParser
+
+    parser = ArgumentParser()
+    subparsers = parser.add_subparsers(dest='command', required=True)
+
+    configure_parser = subparsers.add_parser('configure')
+    configure_parser.add_argument('--vault-path', dest='vault_path', default=None)
+    configure_parser.add_argument('--show', action='store_true')
+
+    return parser
+
+
+def test_parse_args_configure_vault_path():
+    parser = build_configure_parser()
+    args = parser.parse_args(['configure', '--vault-path', '/path/to/vault'])
+    assert args.command == 'configure'
+    assert args.vault_path == '/path/to/vault'
+    assert args.show is False
+
+
+def test_parse_args_configure_show():
+    parser = build_configure_parser()
+    args = parser.parse_args(['configure', '--show'])
+    assert args.show is True
+    assert args.vault_path is None
+
+
+def test_parse_args_configure_defaults():
+    parser = build_configure_parser()
+    args = parser.parse_args(['configure'])
+    assert args.vault_path is None
+    assert args.show is False
+
+
+# ============================================================================
+# Tests for resolve_vault_path()
+# ============================================================================
+
+def test_resolve_vault_path_cli_value_wins(monkeypatch):
+    """An explicit CLI value is used and config is not consulted."""
+    monkeypatch.setattr(obsidian_tools, 'get_value', lambda *a, **k: '/configured')
+    assert obsidian_tools.resolve_vault_path('/explicit') == Path('/explicit')
+
+
+def test_resolve_vault_path_falls_back_to_config(monkeypatch):
+    monkeypatch.setattr(obsidian_tools, 'get_value', lambda *a, **k: '/configured')
+    assert obsidian_tools.resolve_vault_path(None) == Path('/configured')
+
+
+def test_resolve_vault_path_none_when_unset(monkeypatch):
+    monkeypatch.setattr(obsidian_tools, 'get_value', lambda *a, **k: None)
+    assert obsidian_tools.resolve_vault_path(None) is None
+
+
+def test_resolve_vault_path_expands_user(monkeypatch):
+    monkeypatch.setattr(obsidian_tools, 'get_value', lambda *a, **k: None)
+    assert obsidian_tools.resolve_vault_path('~/vault') == Path.home() / 'vault'
+
+
+# ============================================================================
+# Tests for handle_configure_command()
+# ============================================================================
+
+def test_configure_show_empty(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path))
+    obsidian_tools.handle_configure_command(Namespace(show=True, vault_path=None))
+    assert 'No configuration saved yet' in capsys.readouterr().out
+
+
+def test_configure_show_populated(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path))
+    obsidian_tools.set_value('vault_path', '/my/vault')
+    obsidian_tools.handle_configure_command(Namespace(show=True, vault_path=None))
+    out = capsys.readouterr().out
+    assert 'vault_path: /my/vault' in out
+
+
+def test_configure_saves_valid_vault_path(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path))
+    vault = tmp_path / 'vault'
+    vault.mkdir()
+    obsidian_tools.handle_configure_command(Namespace(show=False, vault_path=str(vault)))
+    assert obsidian_tools.get_value('vault_path') == str(vault)
+    assert 'Saved vault_path' in capsys.readouterr().out
+
+
+def test_configure_rejects_missing_directory(tmp_path, monkeypatch):
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path))
+    args = Namespace(show=False, vault_path=str(tmp_path / 'does-not-exist'))
+    with pytest.raises(SystemExit):
+        obsidian_tools.handle_configure_command(args)
+
+
+def test_configure_interactive_prompt(tmp_path, monkeypatch):
+    """With no --vault-path, the value is read from get_user_input()."""
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path))
+    vault = tmp_path / 'vault'
+    vault.mkdir()
+    monkeypatch.setattr(obsidian_tools, 'get_user_input', lambda prompt: str(vault))
+    obsidian_tools.handle_configure_command(Namespace(show=False, vault_path=None))
+    assert obsidian_tools.get_value('vault_path') == str(vault)
+
+
+def test_configure_interactive_empty_keeps_existing(tmp_path, monkeypatch, capsys):
+    """Empty interactive input keeps the previously saved vault path."""
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path))
+    obsidian_tools.set_value('vault_path', '/existing/vault')
+    monkeypatch.setattr(obsidian_tools, 'get_user_input', lambda prompt: '')
+    obsidian_tools.handle_configure_command(Namespace(show=False, vault_path=None))
+    assert obsidian_tools.get_value('vault_path') == '/existing/vault'
+    assert 'Keeping existing' in capsys.readouterr().out
+
+
+# ============================================================================
+# Tests for vault fallback in the 'add' handler
+# ============================================================================
+
+def test_add_command_errors_without_vault_or_config(tmp_path, monkeypatch):
+    """add exits when neither a CLI vault path nor a saved one is available."""
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path))  # empty config
+    monkeypatch.setattr('sys.stdin', StringIO(''))
+    args = Namespace(vault_path=None, media_type='book', backup_filename=None, poster_width=200)
+    with pytest.raises(SystemExit):
+        obsidian_tools.handle_add_command(args)
+
+
+def test_add_command_uses_configured_vault(tmp_path, monkeypatch, capsys):
+    """add uses the saved vault_path when the CLI arg is omitted."""
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path))
+    vault = tmp_path / 'vault'
+    vault.mkdir()
+    obsidian_tools.set_value('vault_path', str(vault))
+    monkeypatch.setattr(obsidian_tools, 'create_vault_backup', Mock())
+    monkeypatch.setattr('sys.stdin', StringIO(''))
+
+    args = Namespace(vault_path=None, media_type='book', backup_filename=None, poster_width=200)
+    obsidian_tools.handle_add_command(args)
+
+    out = capsys.readouterr().out
+    assert str(vault) in out
+    assert 'No titles provided' in out

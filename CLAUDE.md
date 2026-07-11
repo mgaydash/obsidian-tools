@@ -44,6 +44,7 @@ lib/                              # Shared library modules
 │   ├── musicbrainz_client.py    # MusicBrainz implementation (albums)
 │   └── openlibrary_client.py    # Open Library implementation (books)
 ├── backup.py                    # Vault backup utilities
+├── config.py                    # Persistent user settings (JSON in XDG config dir)
 ├── obsidian_utils.py            # YAML, wikilinks, year extraction, disambiguation
 ├── poster_utils.py              # Shared poster download/resize utilities
 └── poster_downloader.py         # Standalone poster command implementation
@@ -116,11 +117,30 @@ below use the module form but the installed command is equivalent.
 
 ### Main CLI Commands
 
+**Configure a default vault path (persisted):**
+```bash
+# Save the vault path so later commands can omit it
+python obsidian_tools.py configure --vault-path ~/vault
+
+# Prompt interactively for the path (works even with piped stdin, via /dev/tty)
+python obsidian_tools.py configure
+
+# Print saved configuration
+python obsidian_tools.py configure --show
+```
+
+Config is stored as JSON at `$XDG_CONFIG_HOME/obsidian-tools/config.json`
+(default `~/.config/obsidian-tools/config.json`). Once set, `vault_path` is
+optional on `add`/`posters`; an explicit CLI argument always overrides it.
+
 **Add new media notes:**
 ```bash
-# Movies (reads from stdin, newline-separated)
+# Movies (reads from stdin, newline-separated); uses the configured vault path
 # Automatically downloads posters for movies/TV during creation
-echo -e "Inception\nThe Matrix" | python obsidian_tools.py add ~/vault --media-type movie
+echo -e "Inception\nThe Matrix" | python obsidian_tools.py add --media-type movie
+
+# Explicit vault path (overrides the configured one)
+echo "The Matrix" | python obsidian_tools.py add ~/vault --media-type movie
 
 # TV shows with custom poster width
 python obsidian_tools.py add ~/vault --media-type tv --poster-width 300
@@ -170,17 +190,18 @@ tests/
 │                                    # (pytest/coverage config lives in pyproject.toml)
 ├── fixtures/                        # Test data
 │   └── api_responses/*.json        # Mock API responses
-├── unit/                            # Unit tests (~3,100 lines)
+├── test_cli.py                      # CLI parsing + command handlers (configure, backup, vault fallback)
+├── unit/                            # Unit tests
 │   ├── test_obsidian_utils.py     # Core utilities (100+ tests)
 │   ├── test_poster_utils.py       # Poster download/resize
 │   ├── test_backup.py             # Backup functionality
+│   ├── test_config.py             # Persistent config (lib/config.py)
 │   ├── test_poster_downloader.py  # Poster command workflow
-│   ├── api/
-│   │   ├── test_factory.py        # MediaAPIFactory routing
-│   │   ├── test_tmdb_client.py    # TMDB client (movies/TV)
-│   │   ├── test_igdb_client.py    # IGDB client (games)
-│   │   └── test_musicbrainz_client.py  # MusicBrainz client (albums)
-│   └── test_cli.py                # CLI argument parsing
+│   └── api/
+│       ├── test_factory.py        # MediaAPIFactory routing
+│       ├── test_tmdb_client.py    # TMDB client (movies/TV)
+│       ├── test_igdb_client.py    # IGDB client (games)
+│       └── test_musicbrainz_client.py  # MusicBrainz client (albums)
 └── integration/                    # Integration tests (future)
 ```
 
@@ -416,6 +437,17 @@ Applied to all generated filenames.
 ### Vault Backup
 
 Backup is **opt-in** on both the `add` and `posters` commands via the `-b/--backup FILE` option (`args.backup_filename`, defaults to `None`). When the flag is omitted, the header prints `Backup: disabled`, `create_vault_backup()` is not called, and the summary omits the backup line. When a path is provided, the vault is zipped to that path before any notes are created/modified. There is no positional backup argument.
+
+### Persistent Configuration
+
+Persistent settings live in `lib/config.py`, stored as JSON at
+`$XDG_CONFIG_HOME/obsidian-tools/config.json` (default `~/.config/obsidian-tools/config.json`).
+
+- `get_config_path()`, `load_config()`, `save_config(dict)`, `set_value(key, value)`, `get_value(key, default)`. All reads are tolerant: a missing, malformed, or non-dict file yields `{}`.
+- The `configure` subcommand (`handle_configure_command`) saves settings: `--vault-path PATH` validates the directory and persists it; with no flag it prompts via `get_user_input()` (reads `/dev/tty`, so it works with piped stdin); `--show` prints the saved config. Only `vault_path` is stored today, but the module is a generic key/value store.
+- `vault_path` is **optional** on `add`/`posters` (`nargs='?'`). `resolve_vault_path(cli_value)` returns the CLI arg if given, else the saved `vault_path`, else `None` (handlers then exit with a message pointing at `configure`). An explicit CLI argument always wins over the saved value.
+
+**Testing note:** always set `XDG_CONFIG_HOME` to a `tmp_path` (via `monkeypatch.setenv`) in tests that touch config so the real `~/.config` file is never read or written.
 
 ## Environment Variables
 
