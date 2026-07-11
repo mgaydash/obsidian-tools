@@ -108,8 +108,8 @@ def build_add_parser():
     subparsers = parser.add_subparsers(dest='command', required=True)
 
     add_parser = subparsers.add_parser('add')
-    add_parser.add_argument('vault_path', nargs='?', default=None)
-    add_parser.add_argument('--media-type', required=True, choices=['movie', 'tv', 'game', 'album', 'book'])
+    add_parser.add_argument('media_type', choices=['movie', 'tv', 'game', 'album', 'book'])
+    add_parser.add_argument('--vault-path', dest='vault_path', default=None)
     add_parser.add_argument('-b', '--backup', dest='backup_filename', default=None)
     add_parser.add_argument('--poster-width', type=int, default=200)
 
@@ -117,17 +117,26 @@ def build_add_parser():
 
 
 def test_parse_args_add_movie():
-    """Test parsing arguments for add command with movie."""
+    """Test parsing arguments for add command with movie (media type positional)."""
     parser = build_add_parser()
 
-    args = parser.parse_args(['add', '/path/to/vault', '--media-type', 'movie'])
+    args = parser.parse_args(['add', 'movie'])
 
     assert args.command == 'add'
-    assert args.vault_path == '/path/to/vault'
+    assert args.media_type == 'movie'
+    # Vault path is an option and defaults to None (falls back to config)
+    assert args.vault_path is None
     # Backup is optional and defaults to None (disabled)
     assert args.backup_filename is None
-    assert args.media_type == 'movie'
     assert args.poster_width == 200
+
+
+def test_parse_args_add_vault_path_option():
+    """Test that --vault-path captures the vault path."""
+    parser = build_add_parser()
+
+    args = parser.parse_args(['add', 'movie', '--vault-path', '/path/to/vault'])
+    assert args.vault_path == '/path/to/vault'
 
 
 def test_parse_args_add_with_backup():
@@ -135,11 +144,11 @@ def test_parse_args_add_with_backup():
     parser = build_add_parser()
 
     # Long form
-    args = parser.parse_args(['add', '/path/to/vault', '--media-type', 'movie', '--backup', 'backup.zip'])
+    args = parser.parse_args(['add', 'movie', '--backup', 'backup.zip'])
     assert args.backup_filename == 'backup.zip'
 
     # Short form
-    args = parser.parse_args(['add', '/path/to/vault', '--media-type', 'movie', '-b', 'backup.zip'])
+    args = parser.parse_args(['add', 'movie', '-b', 'backup.zip'])
     assert args.backup_filename == 'backup.zip'
 
 
@@ -147,26 +156,26 @@ def test_parse_args_add_custom_width():
     """Test parsing add command with custom poster width."""
     parser = build_add_parser()
 
-    args = parser.parse_args(['add', '/path/to/vault', '--media-type', 'tv', '--poster-width', '300'])
+    args = parser.parse_args(['add', 'tv', '--poster-width', '300'])
 
     assert args.media_type == 'tv'
     assert args.poster_width == 300
 
 
 def test_parse_args_add_missing_media_type():
-    """Test that missing media-type argument raises error."""
+    """Test that the media type positional is required."""
     parser = build_add_parser()
 
     with pytest.raises(SystemExit):
-        args = parser.parse_args(['add', '/path/to/vault'])
+        args = parser.parse_args(['add'])
 
 
 def test_parse_args_add_invalid_media_type():
-    """Test that invalid media-type raises error."""
+    """Test that invalid media type raises error."""
     parser = build_add_parser()
 
     with pytest.raises(SystemExit):
-        args = parser.parse_args(['add', '/path/to/vault', '--media-type', 'podcast'])
+        args = parser.parse_args(['add', 'podcast'])
 
 
 # ============================================================================
@@ -181,7 +190,7 @@ def build_posters_parser():
     subparsers = parser.add_subparsers(dest='command', required=True)
 
     posters_parser = subparsers.add_parser('posters')
-    posters_parser.add_argument('vault_path', nargs='?', default=None)
+    posters_parser.add_argument('--vault-path', dest='vault_path', default=None)
     posters_parser.add_argument('-b', '--backup', dest='backup_filename', default=None)
     posters_parser.add_argument('--width', type=int, default=200)
     posters_parser.add_argument('--media-type', choices=['all', 'movie', 'tv', 'game', 'album', 'book'], default='all')
@@ -190,17 +199,26 @@ def build_posters_parser():
 
 
 def test_parse_args_posters_default():
-    """Test parsing posters command with defaults."""
+    """Test parsing posters command with defaults (no positional args)."""
     parser = build_posters_parser()
 
-    args = parser.parse_args(['posters', '/path/to/vault'])
+    args = parser.parse_args(['posters'])
 
     assert args.command == 'posters'
-    assert args.vault_path == '/path/to/vault'
+    # Vault path is an option and defaults to None (falls back to config)
+    assert args.vault_path is None
     # Backup is optional and defaults to None (disabled)
     assert args.backup_filename is None
     assert args.width == 200
     assert args.media_type == 'all'
+
+
+def test_parse_args_posters_vault_path_option():
+    """Test that --vault-path captures the vault path."""
+    parser = build_posters_parser()
+
+    args = parser.parse_args(['posters', '--vault-path', '/path/to/vault'])
+    assert args.vault_path == '/path/to/vault'
 
 
 def test_parse_args_posters_with_backup():
@@ -208,11 +226,11 @@ def test_parse_args_posters_with_backup():
     parser = build_posters_parser()
 
     # Long form
-    args = parser.parse_args(['posters', '/path/to/vault', '--backup', 'backup.zip'])
+    args = parser.parse_args(['posters', '--backup', 'backup.zip'])
     assert args.backup_filename == 'backup.zip'
 
     # Short form
-    args = parser.parse_args(['posters', '/path/to/vault', '-b', 'backup.zip'])
+    args = parser.parse_args(['posters', '-b', 'backup.zip'])
     assert args.backup_filename == 'backup.zip'
 
 
@@ -220,7 +238,7 @@ def test_parse_args_posters_custom_width():
     """Test parsing posters command with custom width."""
     parser = build_posters_parser()
 
-    args = parser.parse_args(['posters', '/path/to/vault', '--width', '300'])
+    args = parser.parse_args(['posters', '--width', '300'])
 
     assert args.width == 300
 
@@ -229,7 +247,7 @@ def test_parse_args_posters_media_type_filter():
     """Test parsing posters command with media type filter."""
     parser = build_posters_parser()
 
-    args = parser.parse_args(['posters', '/path/to/vault', '--media-type', 'album'])
+    args = parser.parse_args(['posters', '--media-type', 'album'])
 
     assert args.media_type == 'album'
 
@@ -239,7 +257,7 @@ def test_parse_args_posters_invalid_media_type():
     parser = build_posters_parser()
 
     with pytest.raises(SystemExit):
-        args = parser.parse_args(['posters', '/path/to/vault', '--media-type', 'podcast'])
+        args = parser.parse_args(['posters', '--media-type', 'podcast'])
 
 
 # ============================================================================
@@ -272,9 +290,9 @@ def test_add_command_media_type_choices():
     """Test that add command accepts correct media types."""
     parser = build_add_parser()
 
-    # Test all valid choices
+    # Test all valid choices (media type is the positional argument)
     for media_type in ['movie', 'tv', 'game', 'album', 'book']:
-        args = parser.parse_args(['add', '/vault', '--media-type', media_type])
+        args = parser.parse_args(['add', media_type])
         assert args.media_type == media_type
 
 
@@ -282,9 +300,9 @@ def test_posters_command_media_type_choices():
     """Test that posters command accepts correct media types including 'all'."""
     parser = build_posters_parser()
 
-    # Test all valid choices
+    # Test all valid choices (media type is a --media-type filter option)
     for media_type in ['all', 'movie', 'tv', 'game', 'album', 'book']:
-        args = parser.parse_args(['posters', '/vault', '--media-type', media_type])
+        args = parser.parse_args(['posters', '--media-type', media_type])
         assert args.media_type == media_type
 
 
@@ -410,9 +428,9 @@ def test_posters_command_creates_backup_when_requested(tmp_path, monkeypatch):
 # ============================================================================
 
 def test_parse_args_add_vault_optional():
-    """add: vault_path may be omitted (falls back to config at runtime)."""
+    """add: vault path may be omitted (falls back to config at runtime)."""
     parser = build_add_parser()
-    args = parser.parse_args(['add', '--media-type', 'movie'])
+    args = parser.parse_args(['add', 'movie'])
     assert args.vault_path is None
     assert args.media_type == 'movie'
 

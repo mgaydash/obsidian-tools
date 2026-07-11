@@ -133,43 +133,45 @@ Config is stored as JSON at `$XDG_CONFIG_HOME/obsidian-tools/config.json`
 (default `~/.config/obsidian-tools/config.json`). Once set, `vault_path` is
 optional on `add`/`posters`; an explicit CLI argument always overrides it.
 
-**Add new media notes:**
+**Add new media notes:** (media type is the positional argument; vault path is
+the `--vault-path` option, defaulting to the configured value)
 ```bash
 # Movies (reads from stdin, newline-separated); uses the configured vault path
 # Automatically downloads posters for movies/TV during creation
-echo -e "Inception\nThe Matrix" | python obsidian_tools.py add --media-type movie
+echo -e "Inception\nThe Matrix" | python obsidian_tools.py add movie
 
 # Explicit vault path (overrides the configured one)
-echo "The Matrix" | python obsidian_tools.py add ~/vault --media-type movie
+echo "The Matrix" | python obsidian_tools.py add movie --vault-path ~/vault
 
 # TV shows with custom poster width
-python obsidian_tools.py add ~/vault --media-type tv --poster-width 300
+python obsidian_tools.py add tv --poster-width 300
 # Then paste titles and press Ctrl+D
 
 # Games with poster download
-echo "Elden Ring" | python obsidian_tools.py add ~/vault --media-type game --poster-width 200
+echo "Elden Ring" | python obsidian_tools.py add game --poster-width 200
 
 # Books (no API key required)
-echo -e "Dune\nThe Hobbit (1937)" | python obsidian_tools.py add ~/vault --media-type book
+echo -e "Dune\nThe Hobbit (1937)" | python obsidian_tools.py add book
 
 # Back up the vault before adding (optional, off by default)
-echo "Inception" | python obsidian_tools.py add ~/vault --media-type movie -b backup.zip
+echo "Inception" | python obsidian_tools.py add movie -b backup.zip
 ```
 
-**Download posters for existing notes (retroactive):**
+**Download posters for existing notes (retroactive):** (options only; vault path
+is the `--vault-path` option, defaulting to the configured value)
 ```bash
 # Default: process all media types (movies, TV, games)
-python obsidian_tools.py posters ~/vault
+python obsidian_tools.py posters
 
 # Filter by media type
-python obsidian_tools.py posters ~/vault --media-type game
-python obsidian_tools.py posters ~/vault --media-type movie
+python obsidian_tools.py posters --media-type game
+python obsidian_tools.py posters --media-type movie
 
 # Custom width for all types
-python obsidian_tools.py posters ~/vault --width 300
+python obsidian_tools.py posters --width 300
 
-# Back up the vault before downloading (optional, off by default)
-python obsidian_tools.py posters ~/vault -b backup.zip
+# Explicit vault path and a backup (both optional)
+python obsidian_tools.py posters --vault-path ~/vault -b backup.zip
 ```
 
 ### Check syntax
@@ -445,7 +447,7 @@ Persistent settings live in `lib/config.py`, stored as JSON at
 
 - `get_config_path()`, `load_config()`, `save_config(dict)`, `set_value(key, value)`, `get_value(key, default)`. All reads are tolerant: a missing, malformed, or non-dict file yields `{}`.
 - The `configure` subcommand (`handle_configure_command`) saves settings: `--vault-path PATH` validates the directory and persists it; with no flag it prompts via `get_user_input()` (reads `/dev/tty`, so it works with piped stdin); `--show` prints the saved config. Only `vault_path` is stored today, but the module is a generic key/value store.
-- `vault_path` is **optional** on `add`/`posters` (`nargs='?'`). `resolve_vault_path(cli_value)` returns the CLI arg if given, else the saved `vault_path`, else `None` (handlers then exit with a message pointing at `configure`). An explicit CLI argument always wins over the saved value.
+- On `add`/`posters` the vault path is the **`--vault-path PATH` option** (not a positional; `add`'s positional is the media type). `resolve_vault_path(cli_value)` returns the option value if given, else the saved `vault_path`, else `None` (handlers then exit with a message pointing at `configure`). An explicit `--vault-path` always wins over the saved value.
 
 **Testing note:** always set `XDG_CONFIG_HOME` to a `tmp_path` (via `monkeypatch.setenv`) in tests that touch config so the real `~/.config` file is never read or written.
 

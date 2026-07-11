@@ -462,26 +462,26 @@ Examples:
   python obsidian_tools.py configure --vault-path ~/vault
   python obsidian_tools.py configure --show
 
-  # Add movies from stdin (uses the configured vault path)
-  echo -e "Inception\\nThe Matrix" | python obsidian_tools.py add --media-type movie
+  # Add movies from stdin (media type is the positional; uses the configured vault path)
+  echo -e "Inception\\nThe Matrix" | python obsidian_tools.py add movie
 
   # Add TV shows interactively, to an explicit vault (overrides the saved one)
-  python obsidian_tools.py add ~/other-vault --media-type tv
+  python obsidian_tools.py add tv --vault-path ~/other-vault
 
   # Add games, backing up the vault first
-  echo -e "Elden Ring\\nHollow Knight" | python obsidian_tools.py add --media-type game -b backup.zip
+  echo -e "Elden Ring\\nHollow Knight" | python obsidian_tools.py add game -b backup.zip
 
   # Add albums
-  echo "Dark Side of the Moon (1973)" | python obsidian_tools.py add --media-type album
+  echo "Dark Side of the Moon (1973)" | python obsidian_tools.py add album
 
   # Add books
-  echo -e "Dune\nThe Hobbit (1937)" | python obsidian_tools.py add --media-type book
+  echo -e "Dune\nThe Hobbit (1937)" | python obsidian_tools.py add book
 
   # Download posters for existing notes (all media types)
   python obsidian_tools.py posters
 
-  # Download posters at custom width
-  python obsidian_tools.py posters --width 300
+  # Download posters at custom width, for an explicit vault
+  python obsidian_tools.py posters --width 300 --vault-path ~/vault
 
   # Download posters, backing up the vault first
   python obsidian_tools.py posters --media-type album -b backup.zip
@@ -504,17 +504,17 @@ Environment Variables:
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     add_parser.add_argument(
-        'vault_path',
-        nargs='?',
+        'media_type',
+        choices=['movie', 'tv', 'game', 'album', 'book'],
+        help='Type of media to add'
+    )
+    add_parser.add_argument(
+        '--vault-path',
+        dest='vault_path',
+        metavar='PATH',
         default=None,
         help='Path to Obsidian vault (defaults to the configured vault_path; '
              'set one with "configure --vault-path")'
-    )
-    add_parser.add_argument(
-        '--media-type',
-        required=True,
-        choices=['movie', 'tv', 'game', 'album', 'book'],
-        help='Type of media to add'
     )
     add_parser.add_argument(
         '-b', '--backup',
@@ -538,8 +538,9 @@ Environment Variables:
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     posters_parser.add_argument(
-        'vault_path',
-        nargs='?',
+        '--vault-path',
+        dest='vault_path',
+        metavar='PATH',
         default=None,
         help='Path to Obsidian vault (defaults to the configured vault_path; '
              'set one with "configure --vault-path")'

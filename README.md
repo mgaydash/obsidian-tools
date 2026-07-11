@@ -50,43 +50,45 @@ Settings are stored at `~/.config/obsidian-tools/config.json` (respecting
 
 ### Add Media Notes
 
-Create new notes from titles (reads from stdin). These use the configured vault
-path; pass a path explicitly to override it:
+Create new notes from titles (reads from stdin). The media type is the
+positional argument; the vault path defaults to the configured value, and
+`--vault-path` overrides it:
 
 ```bash
 # Movies (uses the configured vault path)
 echo -e "Inception (2010)\nThe Matrix (1999)" | \
-  obsidian-tools add --media-type movie
+  obsidian-tools add movie
 
 # TV shows, to an explicit vault
 echo "Breaking Bad (2008)" | \
-  obsidian-tools add ~/vault --media-type tv
+  obsidian-tools add tv --vault-path ~/vault
 
 # Games
 echo "Elden Ring (2022)" | \
-  obsidian-tools add ~/vault --media-type game
+  obsidian-tools add game
 
 # Interactive mode (paste titles, then Ctrl+D)
-obsidian-tools add ~/vault --media-type movie
+obsidian-tools add movie
 
 # Back up the vault first (optional, off by default)
 echo "Inception (2010)" | \
-  obsidian-tools add ~/vault --media-type movie -b backup.zip
+  obsidian-tools add movie -b backup.zip
 ```
 
 ### Download Posters
 
-Download and embed posters for existing movie/TV notes:
+Download and embed posters for existing movie/TV notes (uses the configured
+vault path; `--vault-path` overrides it):
 
 ```bash
 # Default 200px width
-obsidian-tools posters ~/vault
+obsidian-tools posters
 
 # Custom width
-obsidian-tools posters ~/vault --width 300
+obsidian-tools posters --width 300
 
-# Back up the vault first (optional, off by default)
-obsidian-tools posters ~/vault -b backup.zip
+# Explicit vault + backup (both optional)
+obsidian-tools posters --vault-path ~/vault -b backup.zip
 ```
 
 ## Features
