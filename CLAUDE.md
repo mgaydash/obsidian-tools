@@ -56,7 +56,9 @@ tests/                            # Test suite (88% coverage, 266 tests)
 │   └── test_*.py                # Module tests
 └── integration/                 # Integration tests (future)
 
-obsidian_tools.py                # Main CLI with subcommands
+obsidian_tools.py                # Main CLI with subcommands (entry point: obsidian_tools:main)
+pyproject.toml                   # Deps, build config, pytest/coverage config
+genre_mappings.yaml              # Genre → tag mappings (loaded relative to lib/)
 ```
 
 ### Key Design Patterns
@@ -93,14 +95,24 @@ Used by both the integrated 'add' command poster download and the standalone 'po
 ## Commands
 
 ### Setup
+
+Dependencies and tooling config live in `pyproject.toml` (there is no
+`requirements.txt` or `pytest.ini`). Install editable so the tool runs from the
+source tree — `genre_mappings.yaml` is loaded relative to `lib/` and only
+resolves under an editable install:
+
 ```bash
-pip install -r requirements.txt
+pip install -e ".[dev]"     # runtime + test/dev deps; registers the `obsidian-tools` command
 
 # Set environment variables
 export TMDB_API_KEY='your_key'              # For movies/TV
 export IGDB_CLIENT_ID='your_client_id'      # For games
 export IGDB_CLIENT_SECRET='your_secret'     # For games
 ```
+
+Both `obsidian-tools <command> ...` (console entry point, `obsidian_tools:main`)
+and `python obsidian_tools.py <command> ...` (from the repo root) work; examples
+below use the module form but the installed command is equivalent.
 
 ### Main CLI Commands
 
@@ -155,7 +167,7 @@ The project has comprehensive test coverage with **266 test cases** achieving **
 ```
 tests/
 ├── conftest.py                      # Shared fixtures
-├── pytest.ini                       # Test configuration
+│                                    # (pytest/coverage config lives in pyproject.toml)
 ├── fixtures/                        # Test data
 │   └── api_responses/*.json        # Mock API responses
 ├── unit/                            # Unit tests (~3,100 lines)

@@ -4,9 +4,17 @@ Collection of CLI tools for managing and organizing media notes (movies, TV show
 
 ## Installation
 
+Editable install (recommended — keeps the tool runnable from the source tree
+so `genre_mappings.yaml` resolves correctly):
+
 ```bash
-pip install -r requirements.txt
+pip install -e ".[dev]"     # runtime + test/dev dependencies
+# or, for runtime only:
+pip install -e .
 ```
+
+This registers an `obsidian-tools` console command. Dependencies and tooling
+config live in `pyproject.toml`.
 
 ## Setup
 
@@ -33,18 +41,22 @@ Create new notes from titles (reads from stdin):
 ```bash
 # Movies
 echo -e "Inception (2010)\nThe Matrix (1999)" | \
-  python obsidian_tools.py add ~/vault backup.zip --media-type movie
+  obsidian-tools add ~/vault --media-type movie
 
 # TV shows
 echo "Breaking Bad (2008)" | \
-  python obsidian_tools.py add ~/vault backup.zip --media-type tv
+  obsidian-tools add ~/vault --media-type tv
 
 # Games
 echo "Elden Ring (2022)" | \
-  python obsidian_tools.py add ~/vault backup.zip --media-type game
+  obsidian-tools add ~/vault --media-type game
 
 # Interactive mode (paste titles, then Ctrl+D)
-python obsidian_tools.py add ~/vault backup.zip --media-type movie
+obsidian-tools add ~/vault --media-type movie
+
+# Back up the vault first (optional, off by default)
+echo "Inception (2010)" | \
+  obsidian-tools add ~/vault --media-type movie -b backup.zip
 ```
 
 ### Download Posters
@@ -53,16 +65,19 @@ Download and embed posters for existing movie/TV notes:
 
 ```bash
 # Default 200px width
-python obsidian_tools.py posters ~/vault backup.zip
+obsidian-tools posters ~/vault
 
 # Custom width
-python obsidian_tools.py posters ~/vault backup.zip --width 300
+obsidian-tools posters ~/vault --width 300
+
+# Back up the vault first (optional, off by default)
+obsidian-tools posters ~/vault -b backup.zip
 ```
 
 ## Features
 
 - **Smart disambiguation**: Include year in parentheses (e.g., "Loot (2022)") for automatic matching
-- **Automatic backups**: Creates zip backup before making changes
+- **Optional backups**: Pass `-b/--backup <file.zip>` to zip the vault before making changes (off by default)
 - **Rich metadata**: IMDB links, descriptions, cast/crew as wikilinks
 - **Tag-based**: Works with files tagged `movie` or `series`
 

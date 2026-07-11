@@ -34,7 +34,7 @@ OVERALL                           88%
 ```
 tests/
 ├── conftest.py                           # Shared fixtures (150 lines)
-├── pytest.ini                            # Test configuration
+│                                         # (pytest/coverage config now in pyproject.toml)
 ├── fixtures/                             # Test data
 │   └── api_responses/*.json              # Mock API responses (9 files)
 ├── unit/                                 # Unit tests (~3,100 lines)

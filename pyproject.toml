@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "obsidian-tools"
+version = "0.1.0"
+description = "CLI tools for managing media notes (movies, TV, games, albums, books) in Obsidian vaults"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "mgaydash", email = "mitchell@gaydash.net" }]
+dependencies = [
+    "requests>=2.31.0",
+    "PyYAML>=6.0.1",
+    "Pillow>=10.0.0",
+    "igdb-api-v4==0.3.3",
+    "musicbrainzngs>=0.7.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-mock>=3.11.1",
+    "pytest-cov>=4.1.0",
+    "responses>=0.23.0",
+    "freezegun>=1.2.2",
+]
+
+[project.scripts]
+obsidian-tools = "obsidian_tools:main"
+
+[tool.setuptools]
+# Flat layout: a single top-level module plus the shared lib package.
+# genre_mappings.yaml is loaded relative to lib/ (see obsidian_utils._load_genre_mappings),
+# which resolves correctly under an editable install (pip install -e .).
+py-modules = ["obsidian_tools"]
+
+[tool.setuptools.packages.find]
+include = ["lib*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+# Ensure the repo root is importable so `import obsidian_tools` / `from lib ...`
+# work whether tests run via `pytest`, `python -m pytest`, or from an install.
+pythonpath = ["."]
+addopts = "-v --cov=lib --cov=obsidian_tools --cov-report=term-missing --cov-branch"
+markers = [
+    "unit: Unit tests (fast, no I/O)",
+    "integration: Integration tests",
+]
