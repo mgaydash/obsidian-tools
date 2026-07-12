@@ -133,11 +133,15 @@ Config is stored as JSON at `$XDG_CONFIG_HOME/obsidian-tools/config.json`
 (default `~/.config/obsidian-tools/config.json`). Once set, `vault_path` is
 optional on `add`/`posters`; an explicit CLI argument always overrides it.
 
-**Add new media notes:** (media type is the positional argument; vault path is
-the `--vault-path` option, defaulting to the configured value)
+**Add new media notes:** (media type is the positional argument; titles follow
+as positional arguments or, if none are given, are read from stdin; vault path
+is the `--vault-path` option, defaulting to the configured value)
 ```bash
-# Movies (reads from stdin, newline-separated); uses the configured vault path
+# Titles as arguments; uses the configured vault path
 # Automatically downloads posters for movies/TV during creation
+python obsidian_tools.py add movie "Inception" "The Matrix (1999)"
+
+# Titles from stdin (used when no title arguments are given), newline-separated
 echo -e "Inception\nThe Matrix" | python obsidian_tools.py add movie
 
 # Explicit vault path (overrides the configured one)
@@ -352,6 +356,14 @@ pytest --cov=lib --cov-report=term
 - **Import errors** - Ensure test imports match actual module structure
 
 ## Important Implementation Details
+
+### Title Input (add command)
+
+`add` takes titles from either source, via `args.titles` (`nargs='*'`):
+- **Command-line arguments:** `add <media-type> "Title 1" "Title 2" ...` — used whenever `args.titles` is non-empty.
+- **stdin:** when no title arguments are given, `read_titles_from_stdin()` reads one title per line until EOF (Ctrl+D).
+
+Both paths funnel through `normalize_titles()`, which strips whitespace, drops empty entries, and de-duplicates while preserving order — so behavior is identical regardless of source.
 
 ### Year-Based Auto-Disambiguation
 

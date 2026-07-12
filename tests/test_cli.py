@@ -109,6 +109,7 @@ def build_add_parser():
 
     add_parser = subparsers.add_parser('add')
     add_parser.add_argument('media_type', choices=['movie', 'tv', 'game', 'album', 'book'])
+    add_parser.add_argument('titles', nargs='*')
     add_parser.add_argument('--vault-path', dest='vault_path', default=None)
     add_parser.add_argument('-b', '--backup', dest='backup_filename', default=None)
     add_parser.add_argument('--poster-width', type=int, default=200)
@@ -124,11 +125,32 @@ def test_parse_args_add_movie():
 
     assert args.command == 'add'
     assert args.media_type == 'movie'
+    # No title arguments -> empty list (titles read from stdin at runtime)
+    assert args.titles == []
     # Vault path is an option and defaults to None (falls back to config)
     assert args.vault_path is None
     # Backup is optional and defaults to None (disabled)
     assert args.backup_filename is None
     assert args.poster_width == 200
+
+
+def test_parse_args_add_title_arguments():
+    """Titles may be passed as positional arguments after the media type."""
+    parser = build_add_parser()
+
+    args = parser.parse_args(['add', 'book', 'Dune', 'The Hobbit (1937)'])
+    assert args.media_type == 'book'
+    assert args.titles == ['Dune', 'The Hobbit (1937)']
+
+
+def test_parse_args_add_titles_with_options_interleaved():
+    """Title arguments coexist with options like --vault-path / -b."""
+    parser = build_add_parser()
+
+    args = parser.parse_args(['add', 'book', 'Dune', '-b', 'backup.zip', '--vault-path', '/v'])
+    assert args.titles == ['Dune']
+    assert args.backup_filename == 'backup.zip'
+    assert args.vault_path == '/v'
 
 
 def test_parse_args_add_vault_path_option():
@@ -364,6 +386,7 @@ def test_add_command_skips_backup_when_not_requested(tmp_path, monkeypatch):
     args = Namespace(
         vault_path=str(tmp_path),
         media_type='book',
+        titles=[],
         backup_filename=None,
         poster_width=200,
     )
@@ -382,6 +405,7 @@ def test_add_command_creates_backup_when_requested(tmp_path, monkeypatch):
     args = Namespace(
         vault_path=str(tmp_path),
         media_type='book',
+        titles=[],
         backup_filename=backup_path,
         poster_width=200,
     )
@@ -569,7 +593,7 @@ def test_add_command_errors_without_vault_or_config(tmp_path, monkeypatch):
     """add exits when neither a CLI vault path nor a saved one is available."""
     monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path))  # empty config
     monkeypatch.setattr('sys.stdin', StringIO(''))
-    args = Namespace(vault_path=None, media_type='book', backup_filename=None, poster_width=200)
+    args = Namespace(vault_path=None, media_type='book', titles=[], backup_filename=None, poster_width=200)
     with pytest.raises(SystemExit):
         obsidian_tools.handle_add_command(args)
 
@@ -583,9 +607,55 @@ def test_add_command_uses_configured_vault(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(obsidian_tools, 'create_vault_backup', Mock())
     monkeypatch.setattr('sys.stdin', StringIO(''))
 
-    args = Namespace(vault_path=None, media_type='book', backup_filename=None, poster_width=200)
+    args = Namespace(vault_path=None, media_type='book', titles=[], backup_filename=None, poster_width=200)
     obsidian_tools.handle_add_command(args)
 
     out = capsys.readouterr().out
     assert str(vault) in out
     assert 'No titles provided' in out
+
+
+# ============================================================================
+# Tests for title normalization and title arguments in the 'add' handler
+# ============================================================================
+
+@pytest.mark.parametrize("raw,expected", [
+    (['Dune', 'The Matrix'], ['Dune', 'The Matrix']),
+    (['  Dune  ', 'The Matrix\n'], ['Dune', 'The Matrix']),   # stripped
+    (['Dune', 'Dune', 'The Matrix'], ['Dune', 'The Matrix']),  # de-duplicated
+    (['Dune', '', '   ', 'The Matrix'], ['Dune', 'The Matrix']),  # empties dropped
+    ([], []),
+])
+def test_normalize_titles(raw, expected):
+    assert obsidian_tools.normalize_titles(raw) == expected
+
+
+def test_add_command_uses_title_arguments(tmp_path, monkeypatch):
+    """When titles are passed as args, they are used (de-duped) and stdin is not read."""
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path))
+    vault = tmp_path / 'vault'
+    vault.mkdir()
+    obsidian_tools.set_value('vault_path', str(vault))
+    monkeypatch.setattr(obsidian_tools, 'create_vault_backup', Mock())
+    monkeypatch.setattr(obsidian_tools.MediaAPIFactory, 'create_client', lambda media_type: Mock())
+
+    # stdin must NOT be consulted when titles are supplied as arguments
+    def fail_if_called():
+        raise AssertionError("read_titles_from_stdin should not be called when titles are given")
+    monkeypatch.setattr(obsidian_tools, 'read_titles_from_stdin', fail_if_called)
+
+    process = Mock(return_value=True)
+    monkeypatch.setattr(obsidian_tools, 'process_title', process)
+
+    args = Namespace(
+        vault_path=None,
+        media_type='book',
+        titles=['Dune', 'Dune', 'The Hobbit'],
+        backup_filename=None,
+        poster_width=200,
+    )
+    obsidian_tools.handle_add_command(args)
+
+    # process_title(client, vault_path, title_input, media_type, poster_width)
+    processed_titles = [call.args[2] for call in process.call_args_list]
+    assert processed_titles == ['Dune', 'The Hobbit']  # de-duplicated, order preserved

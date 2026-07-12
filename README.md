@@ -50,12 +50,16 @@ Settings are stored at `~/.config/obsidian-tools/config.json` (respecting
 
 ### Add Media Notes
 
-Create new notes from titles (reads from stdin). The media type is the
-positional argument; the vault path defaults to the configured value, and
+Create new notes from titles. The media type is the positional argument;
+titles can follow as arguments, or (if none are given) are read from stdin,
+one per line. The vault path defaults to the configured value, and
 `--vault-path` overrides it:
 
 ```bash
-# Movies (uses the configured vault path)
+# Titles as arguments (uses the configured vault path)
+obsidian-tools add movie "Inception (2010)" "The Matrix (1999)"
+
+# Titles from stdin (used when no title arguments are given)
 echo -e "Inception (2010)\nThe Matrix (1999)" | \
   obsidian-tools add movie
 

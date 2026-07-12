@@ -37,6 +37,24 @@ def resolve_vault_path(cli_value: Optional[str]) -> Optional[Path]:
     return Path(value).expanduser() if value else None
 
 
+def normalize_titles(titles: list[str]) -> list[str]:
+    """
+    Strip whitespace, drop empty entries, and de-duplicate while preserving order.
+
+    Shared by the stdin reader and the command-line title arguments so both
+    inputs behave identically.
+    """
+    seen: Set[str] = set()
+    unique_titles = []
+    for title in titles:
+        title = title.strip()
+        if title and title not in seen:  # Skip empty lines and duplicates
+            seen.add(title)
+            unique_titles.append(title)
+
+    return unique_titles
+
+
 def read_titles_from_stdin() -> list[str]:
     """
     Read titles from stdin, one per line.
@@ -47,25 +65,15 @@ def read_titles_from_stdin() -> list[str]:
     print("📝 Enter titles (one per line), then press Ctrl+D when done:")
     print("-" * 80)
 
-    titles = []
+    lines = []
     try:
         for line in sys.stdin:
-            title = line.strip()
-            if title:  # Skip empty lines
-                titles.append(title)
+            lines.append(line)
     except KeyboardInterrupt:
         print("\n\n⚠️  Interrupted by user")
         sys.exit(1)
 
-    # Remove duplicates while preserving order
-    seen: Set[str] = set()
-    unique_titles = []
-    for title in titles:
-        if title not in seen:
-            seen.add(title)
-            unique_titles.append(title)
-
-    return unique_titles
+    return normalize_titles(lines)
 
 
 def embed_poster_in_content(file_path: Path, poster_filename: str) -> bool:
@@ -282,8 +290,11 @@ def handle_add_command(args):
     if args.backup_filename:
         create_vault_backup(vault_path, args.backup_filename)
 
-    # Read titles from stdin
-    titles = read_titles_from_stdin()
+    # Use titles passed as command-line arguments, otherwise read from stdin
+    if args.titles:
+        titles = normalize_titles(args.titles)
+    else:
+        titles = read_titles_from_stdin()
 
     if not titles:
         print("\n✓ No titles provided")
@@ -462,7 +473,10 @@ Examples:
   python obsidian_tools.py configure --vault-path ~/vault
   python obsidian_tools.py configure --show
 
-  # Add movies from stdin (media type is the positional; uses the configured vault path)
+  # Add movies by passing titles as arguments (uses the configured vault path)
+  python obsidian_tools.py add movie "Inception" "The Matrix (1999)"
+
+  # Add movies from stdin (used when no title arguments are given)
   echo -e "Inception\\nThe Matrix" | python obsidian_tools.py add movie
 
   # Add TV shows interactively, to an explicit vault (overrides the saved one)
@@ -507,6 +521,13 @@ Environment Variables:
         'media_type',
         choices=['movie', 'tv', 'game', 'album', 'book'],
         help='Type of media to add'
+    )
+    add_parser.add_argument(
+        'titles',
+        nargs='*',
+        metavar='TITLE',
+        help='One or more titles to add (e.g., "Dune" "The Matrix (1999)"). '
+             'If omitted, titles are read from stdin, one per line.'
     )
     add_parser.add_argument(
         '--vault-path',
