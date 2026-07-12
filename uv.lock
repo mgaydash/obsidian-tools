@@ -432,7 +432,7 @@ wheels = [
 
 [[package]]
 name = "obsidian-tools"
-version = "1.0.0"
+version = "1.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "igdb-api-v4" },
