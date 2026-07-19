@@ -1,5 +1,6 @@
 """Poster downloader for Obsidian media notes."""
 
+import re
 import requests
 import musicbrainzngs
 from pathlib import Path
@@ -17,6 +18,7 @@ class PosterDownloader:
         tmdb_api_key: str = None,
         igdb_client_id: str = None,
         igdb_client_secret: str = None,
+        google_books_api_key: str = None,
         poster_width: int = 200
     ):
         """
@@ -27,12 +29,14 @@ class PosterDownloader:
             tmdb_api_key: TMDB API key (optional)
             igdb_client_id: IGDB client ID (optional)
             igdb_client_secret: IGDB client secret (optional)
+            google_books_api_key: Google Books API key (optional, for book covers)
             poster_width: Width to resize posters to (default: 200px)
         """
         self.vault_path = vault_path
         self.tmdb_api_key = tmdb_api_key
         self.igdb_client_id = igdb_client_id
         self.igdb_client_secret = igdb_client_secret
+        self.google_books_api_key = google_books_api_key
         self.poster_width = poster_width
         self.tmdb_base_url = "https://api.themoviedb.org/3"
 
@@ -207,43 +211,76 @@ class PosterDownloader:
             print(f"❌ IGDB search error: {e}")
             return []
 
-    def search_openlibrary(self, title: str) -> List[Dict]:
+    def search_googlebooks(self, title: str) -> List[Dict]:
         """
-        Search Open Library for a book title.
+        Search Google Books for a book title.
 
         Args:
             title: Title to search for
 
         Returns:
-            List of book results with standardized fields
+            List of book results with standardized fields (including cover_url)
         """
         try:
-            url = "https://openlibrary.org/search.json"
-            response = requests.get(url, params={'title': title, 'limit': 25}, timeout=15)
+            url = "https://www.googleapis.com/books/v1/volumes"
+            params = {
+                'q': f'intitle:{title}',
+                'maxResults': 25,
+                'printType': 'books',
+                'country': 'US',
+                'key': self.google_books_api_key,
+            }
+            response = requests.get(url, params=params, timeout=15)
             response.raise_for_status()
             data = response.json()
 
-            standardized = []
-            for doc in data.get('docs', []):
-                work_key = doc.get('key', '')
-                work_id = work_key.replace('/works/', '') if work_key.startswith('/works/') else work_key
+            representatives = {}
+            order = []
+            for item in data.get('items', []) or []:
+                info = item.get('volumeInfo', {}) or {}
 
-                authors = doc.get('author_name', []) or []
+                authors = info.get('authors', []) or []
                 author = ' & '.join(authors) if authors else 'Unknown'
 
-                standardized.append({
-                    'id': work_id,
-                    'title': doc.get('title', 'Unknown'),
-                    'author': author,
-                    'first_publish_year': doc.get('first_publish_year'),
-                    'cover_id': doc.get('cover_i'),
-                })
+                published = info.get('publishedDate', '') or ''
+                year_match = re.search(r'\b(\d{4})\b', published)
+                first_publish_year = int(year_match.group(1)) if year_match else None
 
-            return standardized
+                book_title = info.get('title', 'Unknown')
+
+                # Collapse duplicate editions by (title, author): keep the first
+                # (most relevant) edition but report the earliest year in the group.
+                key = (book_title.lower(), author.lower())
+                if key not in representatives:
+                    representatives[key] = {
+                        'id': item.get('id', ''),
+                        'title': book_title,
+                        'author': author,
+                        'first_publish_year': first_publish_year,
+                        'cover_url': self._googlebooks_cover_url(info.get('imageLinks')),
+                    }
+                    order.append(key)
+                elif first_publish_year is not None:
+                    rep = representatives[key]
+                    if rep['first_publish_year'] is None or first_publish_year < rep['first_publish_year']:
+                        rep['first_publish_year'] = first_publish_year
+
+            return [representatives[key] for key in order]
 
         except Exception as e:
-            print(f"❌ Open Library search error: {e}")
+            print(f"❌ Google Books search error: {e}")
             return []
+
+    @staticmethod
+    def _googlebooks_cover_url(image_links: Optional[Dict]) -> Optional[str]:
+        """Pick the largest available cover, force HTTPS, drop the page-curl overlay."""
+        if not image_links:
+            return None
+        for size in ('extraLarge', 'large', 'medium', 'small', 'thumbnail', 'smallThumbnail'):
+            url = image_links.get(size)
+            if url:
+                return url.replace('http://', 'https://').replace('&edge=curl', '')
+        return None
 
     def search_musicbrainz(self, title: str) -> List[Dict]:
         """
@@ -301,14 +338,14 @@ class PosterDownloader:
 
         Returns:
             Tuple of (results, api_used) where api_used is 'tmdb', 'igdb', 'musicbrainz',
-            or 'openlibrary'
+            or 'googlebooks'
         """
         if media_type == 'game':
             return self.search_igdb(title), 'igdb'
         elif media_type == 'album':
             return self.search_musicbrainz(title), 'musicbrainz'
         elif media_type == 'book':
-            return self.search_openlibrary(title), 'openlibrary'
+            return self.search_googlebooks(title), 'googlebooks'
         else:
             return self.search_tmdb(title, media_type), 'tmdb'
 
@@ -344,11 +381,8 @@ class PosterDownloader:
             # Cover Art Archive provides direct access to front cover
             return f"https://coverartarchive.org/release/{mbid}/front"
 
-        elif api_used == 'openlibrary':
-            cover_id = result.get('cover_id')
-            if not cover_id:
-                return None
-            return f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg"
+        elif api_used == 'googlebooks':
+            return result.get('cover_url')
 
         return None
 
@@ -377,7 +411,7 @@ class PosterDownloader:
                 name = f"{album_title} - {artist}"
                 year = result.get('date', 'TBD')[:4] if result.get('date') else 'TBD'
                 summary = ""  # MusicBrainz doesn't provide album descriptions
-            elif api_used == 'openlibrary':
+            elif api_used == 'googlebooks':
                 book_title = result.get('title', 'Unknown')
                 author = result.get('author', 'Unknown')
                 name = f"{book_title} - {author}"

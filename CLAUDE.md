@@ -28,7 +28,7 @@ Update the relevant sections immediately after implementing changes. This ensure
 
 ## Project Overview
 
-**Obsidian Tools** - Collection of Python-based CLI tools for managing and organizing media notes (movies, TV shows, games, albums, books) in Obsidian vaults. Uses TMDB API for movies/TV, IGDB API for games, MusicBrainz for albums, and Open Library for books to fetch metadata, create notes, download cover art, and provide utilities for standardizing and enhancing your media library.
+**Obsidian Tools** - Collection of Python-based CLI tools for managing and organizing media notes (movies, TV shows, games, albums, books) in Obsidian vaults. Uses TMDB API for movies/TV, IGDB API for games, MusicBrainz for albums, and Google Books for books to fetch metadata, create notes, download cover art, and provide utilities for standardizing and enhancing your media library.
 
 ## Architecture
 
@@ -42,14 +42,14 @@ lib/                              # Shared library modules
 │   ├── tmdb_client.py           # TMDB implementation (movies/TV)
 │   ├── igdb_client.py           # IGDB implementation (games)
 │   ├── musicbrainz_client.py    # MusicBrainz implementation (albums)
-│   └── openlibrary_client.py    # Open Library implementation (books)
+│   └── googlebooks_client.py    # Google Books implementation (books)
 ├── backup.py                    # Vault backup utilities
 ├── config.py                    # Persistent user settings (JSON in XDG config dir)
 ├── obsidian_utils.py            # YAML, wikilinks, year extraction, disambiguation
 ├── poster_utils.py              # Shared poster download/resize utilities
 └── poster_downloader.py         # Standalone poster command implementation
 
-tests/                            # Test suite (88% coverage, 266 tests)
+tests/                            # Test suite (393 tests)
 ├── conftest.py                  # Shared test fixtures
 ├── fixtures/                    # Test data (JSON, images, markdown)
 ├── unit/                        # Unit tests (~3,100 lines)
@@ -66,9 +66,9 @@ genre_mappings.yaml              # Genre → tag mappings (loaded relative to li
 
 **Factory Pattern (`lib/api/__init__.py`):**
 - `MediaAPIFactory.create_client(media_type)` routes to appropriate API client
-- Returns TMDB client for 'movie'/'tv', IGDB client for 'game', MusicBrainz for 'album', Open Library for 'book'
-- Validates environment variables (TMDB_API_KEY, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET)
-- MusicBrainz and Open Library require no credentials
+- Returns TMDB client for 'movie'/'tv', IGDB client for 'game', MusicBrainz for 'album', Google Books for 'book'
+- Validates environment variables (TMDB_API_KEY, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, GOOGLE_BOOKS_API_KEY)
+- MusicBrainz requires no credentials; Google Books requires GOOGLE_BOOKS_API_KEY
 
 **Abstract Base Class (`lib/api/base.py`):**
 All API clients implement `MediaAPIClient` interface:
@@ -109,6 +109,7 @@ pip install -e ".[dev]"     # runtime + test/dev deps; registers the `obsidian-t
 export TMDB_API_KEY='your_key'              # For movies/TV
 export IGDB_CLIENT_ID='your_client_id'      # For games
 export IGDB_CLIENT_SECRET='your_secret'     # For games
+export GOOGLE_BOOKS_API_KEY='your_key'      # For books
 ```
 
 Both `obsidian-tools <command> ...` (console entry point, `obsidian_tools:main`)
@@ -154,7 +155,7 @@ python obsidian_tools.py add tv --poster-width 300
 # Games with poster download
 echo "Elden Ring" | python obsidian_tools.py add game --poster-width 200
 
-# Books (no API key required)
+# Books (requires GOOGLE_BOOKS_API_KEY)
 echo -e "Dune\nThe Hobbit (1937)" | python obsidian_tools.py add book
 
 # Back up the vault before adding (optional, off by default)
@@ -187,7 +188,7 @@ python3 -m py_compile obsidian_tools.py lib/*.py lib/api/*.py
 
 ### Overview
 
-The project has comprehensive test coverage with **266 test cases** achieving **88% code coverage**. All tests must pass before committing changes.
+The project has comprehensive test coverage with **393 test cases**. All tests must pass before committing changes.
 
 **Test Structure:**
 ```
@@ -207,7 +208,8 @@ tests/
 │       ├── test_factory.py        # MediaAPIFactory routing
 │       ├── test_tmdb_client.py    # TMDB client (movies/TV)
 │       ├── test_igdb_client.py    # IGDB client (games)
-│       └── test_musicbrainz_client.py  # MusicBrainz client (albums)
+│       ├── test_musicbrainz_client.py  # MusicBrainz client (albums)
+│       └── test_googlebooks_client.py  # Google Books client (books)
 └── integration/                    # Integration tests (future)
 ```
 
@@ -394,13 +396,14 @@ Both 'add' and 'posters' commands use intelligent disambiguation:
 - Returns 'cover.image_id' for poster downloads (used automatically in 'add' command)
 - Cover art downloaded using `cover_big` size (227x320) from IGDB image CDN
 
-**Open Library (books):**
-- Search endpoint: `https://openlibrary.org/search.json?title=...` (no API key)
-- Standardized search result fields: `id` (work ID, e.g. 'OL27448W'), `title`, `author` (joined with ' & '), `first_publish_year` (int), `cover_id`, `subjects`
-- Work details: `https://openlibrary.org/works/{work_id}.json` — descriptions may be `str` or `{'type': '/type/text', 'value': str}`
-- Author lookup: separate request per `/authors/{id}.json` reference, joined with ' & '
-- Year fallback: if work's `first_publish_date` is missing, fetches `/works/{id}/editions.json` and uses earliest `publish_date` year
-- Covers downloaded from `https://covers.openlibrary.org/b/id/{cover_id}-L.jpg` (returns None when work has no cover)
+**Google Books (books):**
+- Requires `GOOGLE_BOOKS_API_KEY` (Google Cloud API key). Every request sends `key` and `country=US` params.
+- Search endpoint: `https://www.googleapis.com/books/v1/volumes?q=intitle:{title}&maxResults=25&printType=books` — one fast request that already contains full volume metadata (title, authors, publishedDate, description, categories, imageLinks)
+- Google returns one entry **per edition**, so `search()` de-duplicates by `(title, author)`, keeping the first (most relevant) edition as the representative (its `id`/`cover_url` are used). This keeps disambiguation clean and lets exact-match auto-select work.
+- `first_publish_year` is set to the **earliest** year across all editions in the `(title, author)` group — the closest proxy to a first-edition year, since Google Books has no first-publication field. `search()` also stashes `representative_id → earliest_year` on the client (`self._earliest_years`) so `get_details()` can report that year for the representative volume (whose own `publishedDate` is usually later).
+- Standardized search result fields: `id` (volume ID, e.g. 'B1hSG45JCX4C'), `title`, `author` (from `volumeInfo.authors`, joined with ' & '), `first_publish_year` (int, earliest across editions), `subjects` (from `volumeInfo.categories`), `cover_url`
+- Volume details: `https://www.googleapis.com/books/v1/volumes/{volume_id}` — a single request with no extra author/edition lookups. Descriptions may contain simple HTML, which is stripped. Year comes from `self._earliest_years` (populated by `search()`), falling back to the volume's own `publishedDate` when called outside a search flow.
+- Covers come from `volumeInfo.imageLinks` (largest of `extraLarge`→`smallThumbnail`), forced to HTTPS with the `&edge=curl` page-curl overlay stripped (returns None when the volume has no cover)
 - Filename format: `Author - Title (Year).md` (matches album convention, since duplicate book titles by different authors are common)
 - Tag: `book` (singular)
 
@@ -473,9 +476,11 @@ Persistent settings live in `lib/config.py`, stored as JSON at
 - `IGDB_CLIENT_SECRET` - Twitch application client secret
 - Setup: https://api-docs.igdb.com/#getting-started
 
-**Albums (MusicBrainz):** No credentials required.
+**Required for books:**
+- `GOOGLE_BOOKS_API_KEY` - Google Cloud API key with the Books API enabled
+- Setup: https://console.cloud.google.com/ (enable "Books API", create an API key). The free tier allows 1,000 queries/day; the keyless/anonymous quota is a shared global bucket and is unreliable (returns HTTP 429 when exhausted), so a key is required.
 
-**Books (Open Library):** No credentials required.
+**Albums (MusicBrainz):** No credentials required.
 
 ## Common Patterns
 
@@ -510,7 +515,7 @@ Shared logic in `lib/obsidian_utils.py` used by all commands. Modify `find_exact
 
 **REQUIRED:** When modifying these functions, update tests in `tests/unit/test_obsidian_utils.py`:
 - Test all media types (movie, tv, game, album, book)
-- Test date format variations (especially IGDB Unix timestamps with UTC and Open Library's int `first_publish_year`)
+- Test date format variations (especially IGDB Unix timestamps with UTC and Google Books' int `first_publish_year` parsed from `publishedDate`)
 - Add parametrized tests for edge cases
 
 ### Working with Poster Utilities

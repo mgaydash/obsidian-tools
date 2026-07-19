@@ -378,6 +378,7 @@ from unittest.mock import Mock
 
 def test_add_command_skips_backup_when_not_requested(tmp_path, monkeypatch):
     """add: no backup is created when backup_filename is None."""
+    monkeypatch.setenv('GOOGLE_BOOKS_API_KEY', 'test_key')
     backup_mock = Mock()
     monkeypatch.setattr(obsidian_tools, 'create_vault_backup', backup_mock)
     # Empty stdin so the command returns right after the (skipped) backup step
@@ -397,6 +398,7 @@ def test_add_command_skips_backup_when_not_requested(tmp_path, monkeypatch):
 
 def test_add_command_creates_backup_when_requested(tmp_path, monkeypatch):
     """add: backup is created when backup_filename is provided."""
+    monkeypatch.setenv('GOOGLE_BOOKS_API_KEY', 'test_key')
     backup_mock = Mock()
     monkeypatch.setattr(obsidian_tools, 'create_vault_backup', backup_mock)
     monkeypatch.setattr('sys.stdin', StringIO(''))
@@ -601,6 +603,7 @@ def test_add_command_errors_without_vault_or_config(tmp_path, monkeypatch):
 def test_add_command_uses_configured_vault(tmp_path, monkeypatch, capsys):
     """add uses the saved vault_path when the CLI arg is omitted."""
     monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path))
+    monkeypatch.setenv('GOOGLE_BOOKS_API_KEY', 'test_key')
     vault = tmp_path / 'vault'
     vault.mkdir()
     obsidian_tools.set_value('vault_path', str(vault))

@@ -170,7 +170,8 @@ def mock_env_vars():
     return {
         'TMDB_API_KEY': 'test_tmdb_key',
         'IGDB_CLIENT_ID': 'test_igdb_client',
-        'IGDB_CLIENT_SECRET': 'test_igdb_secret'
+        'IGDB_CLIENT_SECRET': 'test_igdb_secret',
+        'GOOGLE_BOOKS_API_KEY': 'test_google_books_key'
     }
 
 
@@ -185,5 +186,5 @@ def set_mock_env(mock_env_vars, monkeypatch):
 @pytest.fixture
 def clear_env_vars(monkeypatch):
     """Clear all API-related environment variables."""
-    for key in ['TMDB_API_KEY', 'IGDB_CLIENT_ID', 'IGDB_CLIENT_SECRET']:
+    for key in ['TMDB_API_KEY', 'IGDB_CLIENT_ID', 'IGDB_CLIENT_SECRET', 'GOOGLE_BOOKS_API_KEY']:
         monkeypatch.delenv(key, raising=False)

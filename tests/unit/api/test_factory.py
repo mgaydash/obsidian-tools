@@ -4,7 +4,7 @@ import pytest
 import os
 import responses
 
-from lib.api import MediaAPIFactory, TMDBClient, IGDBClient, MusicBrainzClient, OpenLibraryClient
+from lib.api import MediaAPIFactory, TMDBClient, IGDBClient, MusicBrainzClient, GoogleBooksClient
 
 
 # ============================================================================
@@ -50,11 +50,12 @@ def test_create_client_album():
     assert isinstance(client, MusicBrainzClient)
 
 
-def test_create_client_book():
-    """Test creating Open Library client for books (no credentials needed)."""
+def test_create_client_book(set_mock_env):
+    """Test creating Google Books client for books."""
     client = MediaAPIFactory.create_client('book')
 
-    assert isinstance(client, OpenLibraryClient)
+    assert isinstance(client, GoogleBooksClient)
+    assert client.api_key == 'test_google_books_key'
 
 
 # ============================================================================
@@ -108,6 +109,14 @@ def test_create_client_game_missing_both_credentials(clear_env_vars):
 
     assert 'IGDB_CLIENT_ID' in str(excinfo.value)
     assert 'IGDB_CLIENT_SECRET' in str(excinfo.value)
+
+
+def test_create_client_book_missing_api_key(clear_env_vars):
+    """Test creating book client without GOOGLE_BOOKS_API_KEY raises error."""
+    with pytest.raises(ValueError) as excinfo:
+        MediaAPIFactory.create_client('book')
+
+    assert 'GOOGLE_BOOKS_API_KEY' in str(excinfo.value)
 
 
 # ============================================================================
@@ -219,12 +228,12 @@ def test_musicbrainz_client_properties():
     assert isinstance(client, MusicBrainzClient)
 
 
-def test_openlibrary_client_properties():
-    """Test Open Library client has correct properties."""
+def test_googlebooks_client_properties(set_mock_env):
+    """Test Google Books client has correct properties."""
     client = MediaAPIFactory.create_client('book')
 
-    # Open Library client doesn't need credentials
-    assert isinstance(client, OpenLibraryClient)
+    assert isinstance(client, GoogleBooksClient)
+    assert hasattr(client, 'api_key')
 
 
 # ============================================================================
@@ -259,7 +268,7 @@ def test_create_multiple_different_clients(set_mock_env):
     assert isinstance(tv_client, TMDBClient)
     assert isinstance(game_client, IGDBClient)
     assert isinstance(album_client, MusicBrainzClient)
-    assert isinstance(book_client, OpenLibraryClient)
+    assert isinstance(book_client, GoogleBooksClient)
 
 
 def test_create_same_type_multiple_times(set_mock_env):

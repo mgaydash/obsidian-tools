@@ -5,7 +5,7 @@ from .base import MediaAPIClient
 from .tmdb_client import TMDBClient
 from .igdb_client import IGDBClient
 from .musicbrainz_client import MusicBrainzClient
-from .openlibrary_client import OpenLibraryClient
+from .googlebooks_client import GoogleBooksClient
 
 
 class MediaAPIFactory:
@@ -42,7 +42,10 @@ class MediaAPIFactory:
             return MusicBrainzClient()
 
         elif media_type == 'book':
-            return OpenLibraryClient()
+            api_key = os.environ.get('GOOGLE_BOOKS_API_KEY')
+            if not api_key:
+                raise ValueError("GOOGLE_BOOKS_API_KEY environment variable not set")
+            return GoogleBooksClient(api_key)
 
         else:
             raise ValueError(f"Invalid media type: {media_type}. Must be 'movie', 'tv', 'game', 'album', or 'book'")
@@ -54,5 +57,5 @@ __all__ = [
     'TMDBClient',
     'IGDBClient',
     'MusicBrainzClient',
-    'OpenLibraryClient',
+    'GoogleBooksClient',
 ]

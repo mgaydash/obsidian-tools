@@ -399,7 +399,7 @@ def test_find_exact_title_match_book():
 
 
 # ============================================================================
-# Tests for filter_results_by_year - Open Library (books)
+# Tests for filter_results_by_year - Google Books (books)
 # ============================================================================
 
 @pytest.mark.parametrize("year_value,year,should_match", [

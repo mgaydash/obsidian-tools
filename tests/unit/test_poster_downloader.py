@@ -14,10 +14,11 @@ from lib.poster_downloader import PosterDownloader
 
 @pytest.fixture
 def poster_downloader_tmdb(tmp_path):
-    """Create poster downloader with TMDB credentials."""
+    """Create poster downloader with TMDB + Google Books credentials."""
     return PosterDownloader(
         vault_path=tmp_path,
         tmdb_api_key='test_tmdb_key',
+        google_books_api_key='test_google_books_key',
         poster_width=200
     )
 
@@ -547,76 +548,101 @@ def test_get_poster_url_from_result_musicbrainz_missing(poster_downloader_tmdb):
     assert url is None
 
 
-def test_get_poster_url_from_result_openlibrary(poster_downloader_tmdb):
-    """Test extracting cover URL from Open Library result."""
-    result = {'cover_id': 8739161}
+def test_get_poster_url_from_result_googlebooks(poster_downloader_tmdb):
+    """Test extracting cover URL from a Google Books result."""
+    result = {'cover_url': 'https://books.google.com/cover.jpg'}
 
-    url = poster_downloader_tmdb.get_poster_url_from_result(result, 'openlibrary')
+    url = poster_downloader_tmdb.get_poster_url_from_result(result, 'googlebooks')
 
-    assert url == 'https://covers.openlibrary.org/b/id/8739161-L.jpg'
+    assert url == 'https://books.google.com/cover.jpg'
 
 
-def test_get_poster_url_from_result_openlibrary_missing(poster_downloader_tmdb):
-    """Test Open Library result without a cover_id."""
+def test_get_poster_url_from_result_googlebooks_missing(poster_downloader_tmdb):
+    """Test a Google Books result without a cover_url."""
     result = {'title': 'No Cover'}
 
-    url = poster_downloader_tmdb.get_poster_url_from_result(result, 'openlibrary')
+    url = poster_downloader_tmdb.get_poster_url_from_result(result, 'googlebooks')
 
     assert url is None
 
 
 @responses.activate
-def test_search_openlibrary(poster_downloader_tmdb):
-    """Test searching Open Library for a book."""
+def test_search_googlebooks(poster_downloader_tmdb):
+    """Test searching Google Books for a book."""
     responses.add(
         responses.GET,
-        'https://openlibrary.org/search.json',
-        json={'docs': [{
-            'key': '/works/OL1W',
-            'title': 'Dune',
-            'author_name': ['Frank Herbert'],
-            'first_publish_year': 1965,
-            'cover_i': 42,
+        'https://www.googleapis.com/books/v1/volumes',
+        json={'items': [{
+            'id': 'vol1',
+            'volumeInfo': {
+                'title': 'Dune',
+                'authors': ['Frank Herbert'],
+                'publishedDate': '1965-08',
+                'imageLinks': {
+                    'thumbnail': 'http://books.google.com/books/content?id=vol1&img=1&zoom=1&edge=curl&source=gbs_api',
+                },
+            },
         }]},
         status=200,
     )
 
-    results = poster_downloader_tmdb.search_openlibrary('Dune')
+    results = poster_downloader_tmdb.search_googlebooks('Dune')
 
     assert len(results) == 1
-    assert results[0]['id'] == 'OL1W'
+    assert results[0]['id'] == 'vol1'
     assert results[0]['title'] == 'Dune'
     assert results[0]['author'] == 'Frank Herbert'
-    assert results[0]['cover_id'] == 42
+    assert results[0]['first_publish_year'] == 1965
+    assert results[0]['cover_url'] == 'https://books.google.com/books/content?id=vol1&img=1&zoom=1&source=gbs_api'
 
 
 @responses.activate
-def test_search_openlibrary_error_returns_empty(poster_downloader_tmdb):
+def test_search_googlebooks_dedupes_editions(poster_downloader_tmdb):
+    """Editions collapse to one entry: first edition's id, earliest edition's year."""
+    responses.add(
+        responses.GET,
+        'https://www.googleapis.com/books/v1/volumes',
+        json={'items': [
+            {'id': 'a', 'volumeInfo': {'title': 'Dune', 'authors': ['Frank Herbert'], 'publishedDate': '1990'}},
+            {'id': 'b', 'volumeInfo': {'title': 'Dune', 'authors': ['Frank Herbert'], 'publishedDate': '1965'}},
+        ]},
+        status=200,
+    )
+
+    results = poster_downloader_tmdb.search_googlebooks('Dune')
+
+    assert len(results) == 1
+    assert results[0]['id'] == 'a'  # most-relevant edition
+    assert results[0]['first_publish_year'] == 1965  # earliest edition's year
+
+
+@responses.activate
+def test_search_googlebooks_error_returns_empty(poster_downloader_tmdb):
     """Search errors should yield an empty list, not raise."""
     responses.add(
         responses.GET,
-        'https://openlibrary.org/search.json',
-        status=500,
+        'https://www.googleapis.com/books/v1/volumes',
+        status=429,
     )
 
-    results = poster_downloader_tmdb.search_openlibrary('Dune')
+    results = poster_downloader_tmdb.search_googlebooks('Dune')
 
     assert results == []
 
 
 @responses.activate
-def test_search_api_routes_book_to_openlibrary(poster_downloader_tmdb):
-    """Book searches should route to Open Library."""
+def test_search_api_routes_book_to_googlebooks(poster_downloader_tmdb):
+    """Book searches should route to Google Books."""
     responses.add(
         responses.GET,
-        'https://openlibrary.org/search.json',
-        json={'docs': []},
+        'https://www.googleapis.com/books/v1/volumes',
+        json={'items': []},
         status=200,
     )
 
     results, api_used = poster_downloader_tmdb.search_api('Dune', 'book')
 
-    assert api_used == 'openlibrary'
+    assert api_used == 'googlebooks'
     assert results == []
 
 

@@ -1,0 +1,23 @@
+{
+  "kind": "books#volume",
+  "id": "B1hSG45JCX4C",
+  "volumeInfo": {
+    "title": "Dune",
+    "authors": ["Frank Herbert"],
+    "publisher": "Ace Books",
+    "publishedDate": "1990-09",
+    "description": "Set on the <b>desert planet</b> Arrakis, Dune is the story of Paul Atreides.",
+    "industryIdentifiers": [
+      {"type": "ISBN_10", "identifier": "0441172717"},
+      {"type": "ISBN_13", "identifier": "9780441172719"}
+    ],
+    "pageCount": 535,
+    "categories": ["Fiction", "Science Fiction"],
+    "averageRating": 4.5,
+    "imageLinks": {
+      "smallThumbnail": "http://books.google.com/books/content?id=B1hSG45JCX4C&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api",
+      "thumbnail": "http://books.google.com/books/content?id=B1hSG45JCX4C&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+    },
+    "infoLink": "https://books.google.com/books/about/Dune.html?id=B1hSG45JCX4C"
+  }
+}

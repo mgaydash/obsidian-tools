@@ -272,8 +272,8 @@ def handle_add_command(args):
         print("  export IGDB_CLIENT_SECRET='your_client_secret'")
         print("\nFor MusicBrainz (albums):")
         print("  No credentials needed!")
-        print("\nFor Open Library (books):")
-        print("  No credentials needed!")
+        print("\nFor Google Books (books):")
+        print("  export GOOGLE_BOOKS_API_KEY='your_api_key_here'")
         sys.exit(1)
 
     # Print header
@@ -323,9 +323,6 @@ def handle_add_command(args):
         # Rate limiting for MusicBrainz API (max 1 request/second)
         if args.media_type == 'album':
             time.sleep(1.1)
-        # Be polite to Open Library: small pause between books
-        elif args.media_type == 'book':
-            time.sleep(0.5)
 
     # Summary
     print("\n" + "=" * 80)
@@ -355,6 +352,7 @@ def handle_posters_command(args):
     tmdb_api_key = os.environ.get('TMDB_API_KEY')
     igdb_client_id = os.environ.get('IGDB_CLIENT_ID')
     igdb_client_secret = os.environ.get('IGDB_CLIENT_SECRET')
+    google_books_api_key = os.environ.get('GOOGLE_BOOKS_API_KEY')
 
     # Print header
     print("🖼️  Obsidian Media Note Manager - Download Posters")
@@ -371,6 +369,7 @@ def handle_posters_command(args):
         tmdb_api_key=tmdb_api_key,
         igdb_client_id=igdb_client_id,
         igdb_client_secret=igdb_client_secret,
+        google_books_api_key=google_books_api_key,
         poster_width=args.width
     )
 
@@ -504,8 +503,8 @@ Environment Variables:
   TMDB_API_KEY          Required for movies and TV shows
   IGDB_CLIENT_ID        Required for games (Twitch application client ID)
   IGDB_CLIENT_SECRET    Required for games (Twitch application client secret)
+  GOOGLE_BOOKS_API_KEY  Required for books (Google Cloud API key)
   MusicBrainz (albums)  No credentials needed!
-  Open Library (books)  No credentials needed!
         """
     )
 

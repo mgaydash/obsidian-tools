@@ -125,7 +125,7 @@ def filter_results_by_year(results: List[Dict], year: str, media_type: str) -> L
             if 'date' in result:
                 result_year = result['date'][:4] if result['date'] else None
         elif media_type == 'book':
-            # Open Library: first_publish_year is an int
+            # Google Books: first_publish_year is an int
             if 'first_publish_year' in result and result['first_publish_year']:
                 result_year = str(result['first_publish_year'])
 
@@ -163,7 +163,7 @@ def find_exact_title_match(results: List[Dict], title: str, media_type: str) -> 
             # MusicBrainz uses 'title' field
             result_title = result.get('title')
         elif media_type == 'book':
-            # Open Library standardized result uses 'title'
+            # Google Books standardized result uses 'title'
             result_title = result.get('title')
 
         if result_title and result_title.lower().strip() == title_lower:
