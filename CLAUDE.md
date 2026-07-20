@@ -49,7 +49,7 @@ lib/                              # Shared library modules
 ├── poster_utils.py              # Shared poster download/resize utilities
 └── poster_downloader.py         # Standalone poster command implementation
 
-tests/                            # Test suite (393 tests)
+tests/                            # Test suite (398 tests)
 ├── conftest.py                  # Shared test fixtures
 ├── fixtures/                    # Test data (JSON, images, markdown)
 ├── unit/                        # Unit tests (~3,100 lines)
@@ -184,11 +184,24 @@ python obsidian_tools.py posters --vault-path ~/vault -b backup.zip
 python3 -m py_compile obsidian_tools.py lib/*.py lib/api/*.py
 ```
 
+### Lint
+Linting uses `ruff` (config in `pyproject.toml`, `[tool.ruff]`). CI runs it on
+every push/PR, so run it before committing:
+```bash
+ruff check .          # or: uvx ruff check .
+ruff check . --fix    # auto-fix import order, unused imports, etc.
+```
+
+### Continuous Integration
+`.github/workflows/ci.yml` runs the test suite on Python 3.9–3.13 and `ruff check`
+on every push to `main` and every pull request. Tests need no secrets (all API
+calls are mocked), so CI runs without credentials.
+
 ## Testing
 
 ### Overview
 
-The project has comprehensive test coverage with **393 test cases**. All tests must pass before committing changes.
+The project has comprehensive test coverage with **398 test cases**. All tests must pass before committing changes.
 
 **Test Structure:**
 ```

@@ -1,5 +1,9 @@
 # Obsidian Tools
 
+[![CI](https://github.com/mgaydash/obsidian-tools/actions/workflows/ci.yml/badge.svg)](https://github.com/mgaydash/obsidian-tools/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
+
 Collection of CLI tools for managing and organizing media notes (movies, TV shows, games, albums, books) in Obsidian vaults. Fetches metadata from TMDB (movies/TV), IGDB (games), MusicBrainz (albums), and Google Books (books), creates formatted notes, downloads posters and cover art, and provides utilities for standardizing and enhancing your media library.
 
 ## Installation

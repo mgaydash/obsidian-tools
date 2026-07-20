@@ -46,3 +46,6 @@ coverage.xml
 # OS
 .DS_Store
 Thumbs.db
+
+# Vault backups produced by -b/--backup
+*.zip
