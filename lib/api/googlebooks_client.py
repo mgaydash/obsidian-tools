@@ -1,6 +1,7 @@
 """Google Books API client for books."""
 
 import re
+import time
 import requests
 from typing import List, Dict, Optional
 from .base import MediaAPIClient
@@ -15,6 +16,11 @@ class GoogleBooksClient(MediaAPIClient):
     MAX_SUBJECTS = 5
     # Image sizes returned in volumeInfo.imageLinks, largest first.
     COVER_SIZES = ('extraLarge', 'large', 'medium', 'small', 'thumbnail', 'smallThumbnail')
+    # Google Books intermittently returns these for otherwise-valid requests;
+    # retrying with backoff almost always clears them.
+    RETRY_STATUSES = (429, 500, 502, 503, 504)
+    MAX_RETRIES = 3
+    RETRY_BACKOFF = 0.5  # seconds; doubled on each successive retry
 
     def __init__(self, api_key: str):
         self.api_key = api_key
@@ -29,6 +35,29 @@ class GoogleBooksClient(MediaAPIClient):
         params.update(extra)
         return params
 
+    def _get(self, url: str, params: Dict) -> requests.Response:
+        """GET a Google Books URL, retrying transient failures with backoff.
+
+        Google Books is prone to intermittent 5xx / 429 responses on valid
+        requests; those (and network errors) are retried. Non-transient errors
+        such as a bad API key (400/403) are surfaced immediately, since
+        retrying them would only waste time.
+        """
+        for attempt in range(self.MAX_RETRIES + 1):
+            try:
+                response = requests.get(url, params=params, timeout=15)
+                response.raise_for_status()
+                return response
+            except requests.RequestException as e:
+                status = e.response.status_code if e.response is not None else None
+                transient = status is None or status in self.RETRY_STATUSES
+                if not transient or attempt == self.MAX_RETRIES:
+                    raise Exception(f"Google Books API error: {e}")
+                delay = self.RETRY_BACKOFF * (2 ** attempt)
+                print(f"⚠️  Google Books unavailable ({status or 'network error'}), "
+                      f"retrying in {delay:.1f}s ({attempt + 1}/{self.MAX_RETRIES})...")
+                time.sleep(delay)
+
     def search(self, title: str) -> List[Dict]:
         """Search Google Books for a book title."""
         url = f"{self.BASE_URL}/volumes"
@@ -37,13 +66,7 @@ class GoogleBooksClient(MediaAPIClient):
             maxResults=25,
             printType='books',
         )
-        try:
-            response = requests.get(url, params=params, timeout=15)
-            response.raise_for_status()
-        except requests.RequestException as e:
-            raise Exception(f"Google Books API error: {e}")
-
-        items = response.json().get('items', []) or []
+        items = self._get(url, params).json().get('items', []) or []
 
         # Google Books returns one entry per edition, so the same work can appear
         # many times. Collapse duplicates by (title, author): keep the first (most
@@ -94,13 +117,7 @@ class GoogleBooksClient(MediaAPIClient):
     def get_details(self, media_id: str) -> Dict:
         """Get detailed book information from Google Books."""
         url = f"{self.BASE_URL}/volumes/{media_id}"
-        try:
-            response = requests.get(url, params=self._params(), timeout=15)
-            response.raise_for_status()
-        except requests.RequestException as e:
-            raise Exception(f"Google Books API error: {e}")
-
-        info = response.json().get('volumeInfo', {}) or {}
+        info = self._get(url, self._params()).json().get('volumeInfo', {}) or {}
 
         authors = info.get('authors', []) or []
         author = ' & '.join(authors) if authors else 'Unknown'

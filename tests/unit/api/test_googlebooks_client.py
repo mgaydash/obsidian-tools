@@ -212,13 +212,44 @@ def test_search_caps_subjects_to_five(gb_client):
 
 
 @responses.activate
-def test_search_http_error_raises(gb_client):
-    responses.add(responses.GET, SEARCH_URL, json={'error': 'quota'}, status=429)
+def test_search_non_transient_error_raises_immediately(gb_client):
+    """A non-transient status (e.g. bad key -> 403) is not retried."""
+    responses.add(responses.GET, SEARCH_URL, json={'error': 'forbidden'}, status=403)
 
     with pytest.raises(Exception) as excinfo:
         gb_client.search('Dune')
 
     assert 'Google Books API error' in str(excinfo.value)
+    assert len(responses.calls) == 1  # no retries for a 403
+
+
+@responses.activate
+def test_search_retries_transient_error_then_succeeds(gb_client, book_search_payload, mocker):
+    """Google Books' intermittent 503s are retried until one succeeds."""
+    sleep = mocker.patch('lib.api.googlebooks_client.time.sleep')
+    responses.add(responses.GET, SEARCH_URL, json={'error': 'unavailable'}, status=503)
+    responses.add(responses.GET, SEARCH_URL, json={'error': 'unavailable'}, status=503)
+    responses.add(responses.GET, SEARCH_URL, json=book_search_payload, status=200)
+
+    results = gb_client.search('Dune')
+
+    assert len(results) == 2  # succeeded on the third attempt
+    assert len(responses.calls) == 3
+    assert sleep.call_count == 2  # backed off before each retry
+
+
+@responses.activate
+def test_search_retries_exhausted_raises(gb_client, mocker):
+    """After MAX_RETRIES transient failures the error is surfaced."""
+    mocker.patch('lib.api.googlebooks_client.time.sleep')
+    for _ in range(gb_client.MAX_RETRIES + 1):
+        responses.add(responses.GET, SEARCH_URL, json={'error': 'unavailable'}, status=503)
+
+    with pytest.raises(Exception) as excinfo:
+        gb_client.search('Dune')
+
+    assert 'Google Books API error' in str(excinfo.value)
+    assert len(responses.calls) == gb_client.MAX_RETRIES + 1
 
 
 # ============================================================================
@@ -314,12 +345,25 @@ def test_get_details_prefers_largest_cover(gb_client):
 
 @responses.activate
 def test_get_details_http_error_raises(gb_client):
-    responses.add(responses.GET, VOLUME_URL, json={'error': 'server'}, status=500)
+    responses.add(responses.GET, VOLUME_URL, json={'error': 'not found'}, status=404)
 
     with pytest.raises(Exception) as excinfo:
         gb_client.get_details('B1hSG45JCX4C')
 
     assert 'Google Books API error' in str(excinfo.value)
+
+
+@responses.activate
+def test_get_details_retries_transient_error_then_succeeds(gb_client, book_volume_payload, mocker):
+    """get_details shares the retry helper, so it recovers from a transient 503."""
+    mocker.patch('lib.api.googlebooks_client.time.sleep')
+    responses.add(responses.GET, VOLUME_URL, json={'error': 'unavailable'}, status=503)
+    responses.add(responses.GET, VOLUME_URL, json=book_volume_payload, status=200)
+
+    details = gb_client.get_details('B1hSG45JCX4C')
+
+    assert details['title'] == 'Dune'
+    assert len(responses.calls) == 2
 
 
 # ============================================================================
