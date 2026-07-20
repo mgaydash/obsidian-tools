@@ -4,17 +4,17 @@ Obsidian Tools - Media Note Manager
 Add new media notes (movies, TV shows, games, albums, books) to an Obsidian vault from stdin.
 """
 
+import argparse
 import os
 import sys
-import argparse
-import yaml
 import time
 from pathlib import Path
 from typing import Optional, Set
 
-from lib.backup import create_vault_backup
+import yaml
+
 from lib.api import MediaAPIFactory
-from lib.poster_downloader import PosterDownloader
+from lib.backup import create_vault_backup
 from lib.config import get_config_path, get_value, load_config, set_value
 from lib.obsidian_utils import (
     extract_title_and_year,
@@ -22,9 +22,14 @@ from lib.obsidian_utils import (
     find_exact_title_match,
     get_user_input,
     is_game_unreleased,
-    prompt_unreleased_confirmation
+    prompt_unreleased_confirmation,
 )
-from lib.poster_utils import download_and_resize_poster, update_frontmatter_with_poster, extract_yaml_frontmatter
+from lib.poster_downloader import PosterDownloader
+from lib.poster_utils import (
+    download_and_resize_poster,
+    extract_yaml_frontmatter,
+    update_frontmatter_with_poster,
+)
 
 
 def resolve_vault_path(cli_value: Optional[str]) -> Optional[Path]:
@@ -174,7 +179,7 @@ def process_title(
             if not prompt_unreleased_confirmation(game_title):
                 print("⊘ Skipped by user")
                 return False
-        print(f"✓ Auto-selected exact title match")
+        print("✓ Auto-selected exact title match")
         selected = exact_match
     # Handle disambiguation
     elif len(results) > 1:
@@ -224,23 +229,23 @@ def process_title(
     # Download poster for all media types
     poster_url = client.get_poster_url(details)
     if poster_url:
-        print(f"📥 Downloading poster...")
+        print("📥 Downloading poster...")
         poster_filename = file_path.stem + '.jpg'
         poster_file_path = file_path.parent / poster_filename
 
         if download_and_resize_poster(poster_url, poster_file_path, poster_width):
             print(f"✓ Poster saved: {poster_filename}")
             if update_frontmatter_with_poster(file_path, poster_filename):
-                print(f"✓ Frontmatter updated with poster wikilink")
+                print("✓ Frontmatter updated with poster wikilink")
                 # Embed the poster at the beginning of the content
                 if embed_poster_in_content(file_path, poster_filename):
-                    print(f"✓ Poster embedded in content")
+                    print("✓ Poster embedded in content")
                 else:
-                    print(f"⚠️  Failed to embed poster in content")
+                    print("⚠️  Failed to embed poster in content")
             else:
-                print(f"⚠️  Failed to update frontmatter with poster")
+                print("⚠️  Failed to update frontmatter with poster")
         else:
-            print(f"⚠️  Failed to download poster")
+            print("⚠️  Failed to download poster")
     else:
         print(f"⚠️  No poster available for this {media_type}")
 

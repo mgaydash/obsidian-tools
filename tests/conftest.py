@@ -1,10 +1,9 @@
 """Shared pytest fixtures for Obsidian Tools tests."""
 
-import pytest
 from pathlib import Path
+
+import pytest
 from PIL import Image
-import io
-import os
 
 
 @pytest.fixture

@@ -1,12 +1,23 @@
 """Poster downloader for Obsidian media notes."""
 
 import re
-import requests
-import musicbrainzngs
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple
-from .obsidian_utils import extract_title_and_year, filter_results_by_year, find_exact_title_match, get_user_input
-from .poster_utils import download_and_resize_poster, extract_yaml_frontmatter, update_frontmatter_with_poster
+from typing import Dict, List, Optional, Tuple
+
+import musicbrainzngs
+import requests
+
+from .obsidian_utils import (
+    extract_title_and_year,
+    filter_results_by_year,
+    find_exact_title_match,
+    get_user_input,
+)
+from .poster_utils import (
+    download_and_resize_poster,
+    extract_yaml_frontmatter,
+    update_frontmatter_with_poster,
+)
 
 
 class PosterDownloader:
@@ -494,7 +505,7 @@ class PosterDownloader:
         # Check for exact title match
         exact_match = find_exact_title_match(results, title, media_type)
         if exact_match:
-            print(f"✓ Auto-selected exact title match")
+            print("✓ Auto-selected exact title match")
             selected = exact_match
         # Handle disambiguation
         elif len(results) > 1:
@@ -518,7 +529,7 @@ class PosterDownloader:
         poster_file_path = file_path.parent / poster_filename
 
         # Download and resize poster
-        print(f"📥 Downloading poster...")
+        print("📥 Downloading poster...")
         if not download_and_resize_poster(poster_url, poster_file_path, self.poster_width):
             return False
 
@@ -528,6 +539,6 @@ class PosterDownloader:
         if not update_frontmatter_with_poster(file_path, poster_filename):
             return False
 
-        print(f"✓ Frontmatter updated with poster wikilink")
+        print("✓ Frontmatter updated with poster wikilink")
         print(f"✓ Successfully processed: {file_path.name}")
         return True

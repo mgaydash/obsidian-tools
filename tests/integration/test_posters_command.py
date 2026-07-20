@@ -3,9 +3,8 @@
 These tests verify that the poster downloader correctly processes existing vault files.
 """
 
-import pytest
-from pathlib import Path
 
+import pytest
 
 # Note: Full integration tests would require extensive mocking of:
 # - Vault scanning

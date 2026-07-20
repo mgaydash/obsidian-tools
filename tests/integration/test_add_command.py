@@ -3,10 +3,8 @@
 These tests verify that all components work together correctly when adding new media notes.
 """
 
-import pytest
-from pathlib import Path
-import responses
 
+import pytest
 
 # Note: Full integration tests would require extensive mocking of:
 # - stdin for title input

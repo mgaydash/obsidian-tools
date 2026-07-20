@@ -1,11 +1,12 @@
 """Utilities for downloading and processing media posters."""
 
-import requests
-import yaml
+from io import BytesIO
 from pathlib import Path
 from typing import Dict, Optional, Tuple
+
+import requests
+import yaml
 from PIL import Image
-from io import BytesIO
 
 
 def download_and_resize_poster(

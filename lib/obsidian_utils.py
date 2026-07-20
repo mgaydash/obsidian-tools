@@ -1,9 +1,10 @@
 """Utilities for working with Obsidian markdown files."""
 
 import re
-import yaml
 from pathlib import Path
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, List, Optional, Tuple
+
+import yaml
 
 
 def extract_yaml_frontmatter(content: str) -> Tuple[Optional[Dict], str]:

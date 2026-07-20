@@ -14,4 +14,4 @@ def create_vault_backup(vault_path: Path, backup_filename: str) -> None:
                 file_path = Path(root) / file
                 arcname = file_path.relative_to(vault_path)
                 zipf.write(file_path, arcname)
-    print(f"✓ Backup created successfully\n")
+    print("✓ Backup created successfully\n")

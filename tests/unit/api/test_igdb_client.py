@@ -1,13 +1,12 @@
 """Unit tests for lib/api/igdb_client.py"""
 
+import json
+
 import pytest
 import responses
-import json
-from datetime import datetime, timezone
 from freezegun import freeze_time
 
 from lib.api.igdb_client import IGDBClient
-
 
 # ============================================================================
 # Test Fixtures
@@ -151,7 +150,7 @@ def test_search_success(igdb_client, game_search_results, mocker):
 
 def test_search_no_results(igdb_client, mocker):
     """Test search with no results."""
-    mock_api_request = mocker.patch.object(
+    mocker.patch.object(
         igdb_client.wrapper,
         'api_request',
         return_value=json.dumps([]).encode('utf-8')
@@ -164,7 +163,7 @@ def test_search_no_results(igdb_client, mocker):
 
 def test_search_handles_non_list_response(igdb_client, mocker):
     """Test search handles non-list responses gracefully."""
-    mock_api_request = mocker.patch.object(
+    mocker.patch.object(
         igdb_client.wrapper,
         'api_request',
         return_value=json.dumps({'error': 'some error'}).encode('utf-8')
@@ -221,7 +220,7 @@ def test_get_details_success(igdb_client, game_details, mocker):
 
 def test_get_details_not_found(igdb_client, mocker):
     """Test get_details with game not found."""
-    mock_api_request = mocker.patch.object(
+    mocker.patch.object(
         igdb_client.wrapper,
         'api_request',
         return_value=json.dumps([]).encode('utf-8')
@@ -235,7 +234,7 @@ def test_get_details_not_found(igdb_client, mocker):
 
 def test_get_details_invalid_response(igdb_client, mocker):
     """Test get_details with invalid response."""
-    mock_api_request = mocker.patch.object(
+    mocker.patch.object(
         igdb_client.wrapper,
         'api_request',
         return_value=json.dumps({'error': 'invalid'}).encode('utf-8')

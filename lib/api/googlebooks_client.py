@@ -2,10 +2,12 @@
 
 import re
 import time
+from typing import Dict, List, Optional
+
 import requests
-from typing import List, Dict, Optional
+
+from ..obsidian_utils import format_wikilink, get_user_input, sanitize_filename, translate_genre_tag
 from .base import MediaAPIClient
-from ..obsidian_utils import sanitize_filename, format_wikilink, translate_genre_tag, get_user_input
 
 
 class GoogleBooksClient(MediaAPIClient):

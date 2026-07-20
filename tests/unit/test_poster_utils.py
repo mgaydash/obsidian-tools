@@ -1,17 +1,15 @@
 """Unit tests for lib/poster_utils.py"""
 
-import pytest
-import responses
-from pathlib import Path
-from PIL import Image
 import io
+
+import responses
+from PIL import Image
 
 from lib.poster_utils import (
     download_and_resize_poster,
     extract_yaml_frontmatter,
-    update_frontmatter_with_poster
+    update_frontmatter_with_poster,
 )
-
 
 # ============================================================================
 # Tests for extract_yaml_frontmatter

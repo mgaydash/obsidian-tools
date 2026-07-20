@@ -1,9 +1,11 @@
 """MusicBrainz API client for music albums."""
 
+from typing import Dict, List, Optional
+
 import musicbrainzngs
-from typing import List, Dict, Optional
+
+from ..obsidian_utils import format_wikilink, get_user_input, sanitize_filename, translate_genre_tag
 from .base import MediaAPIClient
-from ..obsidian_utils import sanitize_filename, format_wikilink, translate_genre_tag, get_user_input
 
 
 class MusicBrainzClient(MediaAPIClient):
@@ -168,7 +170,6 @@ class MusicBrainzClient(MediaAPIClient):
         tags = ['album']
 
         # Add type-based tags
-        primary_type = details.get('primary_type', 'Album')
         secondary_types = details.get('secondary_types', [])
 
         # Add secondary type tags (EP, Live, Compilation, etc.)

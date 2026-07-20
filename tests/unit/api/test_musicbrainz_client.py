@@ -1,10 +1,10 @@
 """Unit tests for lib/api/musicbrainz_client.py"""
 
-import pytest
 import json
 
-from lib.api.musicbrainz_client import MusicBrainzClient
+import pytest
 
+from lib.api.musicbrainz_client import MusicBrainzClient
 
 # ============================================================================
 # Test Fixtures
@@ -83,7 +83,7 @@ def test_search_success(mb_client, album_search_results, mocker):
 
 def test_search_no_results(mb_client, mocker):
     """Test search with no results."""
-    mock_search = mocker.patch(
+    mocker.patch(
         'musicbrainzngs.search_releases',
         return_value={'release-list': []}
     )
@@ -97,7 +97,7 @@ def test_search_api_error(mb_client, mocker):
     """Test search with API error."""
     import musicbrainzngs
 
-    mock_search = mocker.patch(
+    mocker.patch(
         'musicbrainzngs.search_releases',
         side_effect=musicbrainzngs.WebServiceError('API error')
     )

@@ -1,11 +1,10 @@
 """Unit tests for lib/api/__init__.py (MediaAPIFactory)"""
 
+
 import pytest
-import os
 import responses
 
-from lib.api import MediaAPIFactory, TMDBClient, IGDBClient, MusicBrainzClient, GoogleBooksClient
-
+from lib.api import GoogleBooksClient, IGDBClient, MediaAPIFactory, MusicBrainzClient, TMDBClient
 
 # ============================================================================
 # Tests for MediaAPIFactory.create_client
@@ -280,5 +279,5 @@ def test_create_same_type_multiple_times(set_mock_env):
     assert client1 is not client2
 
     # But same type and properties
-    assert type(client1) == type(client2)
+    assert type(client1) is type(client2)
     assert client1.media_type == client2.media_type

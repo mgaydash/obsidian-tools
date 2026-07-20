@@ -1,12 +1,11 @@
 """Unit tests for lib/poster_downloader.py"""
 
+import json
+
 import pytest
 import responses
-import json
-from pathlib import Path
 
 from lib.poster_downloader import PosterDownloader
-
 
 # ============================================================================
 # Test Fixtures
@@ -413,7 +412,6 @@ def test_search_igdb(tmp_path):
     # Mock IGDB search
     mock_results = [{'name': 'Elden Ring', 'id': 119277}]
 
-    import pytest_mock
     pd.igdb_wrapper.api_request = lambda endpoint, query: json.dumps(mock_results).encode('utf-8')
 
     results = pd.search_igdb('Elden Ring')
@@ -727,17 +725,15 @@ def test_process_file_success(poster_downloader_tmdb, tmp_path, mocker):
     )
 
     # Mock image processing (PIL)
+
     from PIL import Image
-    import io
     test_img = Image.new('RGB', (200, 300), color='red')
     mocker.patch('PIL.Image.open', return_value=test_img)
 
     result = poster_downloader_tmdb.process_file(file, 'movie')
 
     assert result is True
-    # Verify poster file was created
-    poster_file = tmp_path / 'Inception (2010).jpg'
-    # Note: May not actually exist due to mocking, but code path was executed
+    # The poster file may not actually exist due to mocking, but the code path ran.
 
 
 @responses.activate
@@ -782,7 +778,7 @@ def test_process_file_year_filtering(poster_downloader_tmdb, tmp_path, mocker, c
     mocker.patch('lib.poster_downloader.download_and_resize_poster', return_value=True)
     mocker.patch('lib.poster_downloader.update_frontmatter_with_poster', return_value=True)
 
-    result = poster_downloader_tmdb.process_file(file, 'movie')
+    poster_downloader_tmdb.process_file(file, 'movie')
 
     captured = capsys.readouterr()
     assert 'Detected year: 2020' in captured.out
@@ -811,7 +807,7 @@ def test_process_file_exact_match_auto_select(poster_downloader_tmdb, tmp_path, 
     mocker.patch('lib.poster_downloader.download_and_resize_poster', return_value=True)
     mocker.patch('lib.poster_downloader.update_frontmatter_with_poster', return_value=True)
 
-    result = poster_downloader_tmdb.process_file(file, 'series')
+    poster_downloader_tmdb.process_file(file, 'series')
 
     captured = capsys.readouterr()
     assert 'Auto-selected exact title match' in captured.out

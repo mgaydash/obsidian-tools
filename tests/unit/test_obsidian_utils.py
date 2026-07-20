@@ -1,23 +1,21 @@
 """Unit tests for lib/obsidian_utils.py"""
 
+from datetime import datetime, timezone
+
 import pytest
 import yaml
-from datetime import datetime, timezone
-from pathlib import Path
 from freezegun import freeze_time
 
 from lib.obsidian_utils import (
-    extract_yaml_frontmatter,
-    sanitize_filename,
-    format_wikilink,
     extract_title_and_year,
+    extract_yaml_frontmatter,
     filter_results_by_year,
     find_exact_title_match,
+    format_wikilink,
     is_game_unreleased,
+    sanitize_filename,
     translate_genre_tag,
-    _load_genre_mappings
 )
-
 
 # ============================================================================
 # Tests for extract_yaml_frontmatter
@@ -461,7 +459,6 @@ def test_translate_genre_tag_with_mapping(tmp_path, monkeypatch):
 
     # Mock the config path
     from lib import obsidian_utils
-    original_load = obsidian_utils._load_genre_mappings
 
     def mock_load():
         return mappings
@@ -524,7 +521,6 @@ def test_load_genre_mappings_missing_file(tmp_path, monkeypatch):
     obsidian_utils._GENRE_MAPPINGS_CACHE = None
 
     # Mock Path to point to fake location
-    original_file = obsidian_utils.__file__
     monkeypatch.setattr(obsidian_utils, '__file__', str(tmp_path / 'obsidian_utils.py'))
 
     mappings = obsidian_utils._load_genre_mappings()

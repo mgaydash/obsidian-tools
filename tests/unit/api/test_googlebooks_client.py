@@ -1,11 +1,11 @@
 """Unit tests for lib/api/googlebooks_client.py"""
 
 import json
+
 import pytest
 import responses
 
 from lib.api.googlebooks_client import GoogleBooksClient
-
 
 SEARCH_URL = 'https://www.googleapis.com/books/v1/volumes'
 VOLUME_URL = 'https://www.googleapis.com/books/v1/volumes/B1hSG45JCX4C'

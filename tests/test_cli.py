@@ -1,14 +1,14 @@
 """Unit tests for obsidian_tools.py CLI"""
 
-import pytest
-import sys
-from pathlib import Path
+from argparse import Namespace
 from io import StringIO
+from pathlib import Path
+from unittest.mock import Mock
 
+import pytest
 
 # Import the main module
 import obsidian_tools
-
 
 # ============================================================================
 # Tests for read_titles_from_stdin()
@@ -189,7 +189,7 @@ def test_parse_args_add_missing_media_type():
     parser = build_add_parser()
 
     with pytest.raises(SystemExit):
-        args = parser.parse_args(['add'])
+        parser.parse_args(['add'])
 
 
 def test_parse_args_add_invalid_media_type():
@@ -197,7 +197,7 @@ def test_parse_args_add_invalid_media_type():
     parser = build_add_parser()
 
     with pytest.raises(SystemExit):
-        args = parser.parse_args(['add', 'podcast'])
+        parser.parse_args(['add', 'podcast'])
 
 
 # ============================================================================
@@ -279,7 +279,7 @@ def test_parse_args_posters_invalid_media_type():
     parser = build_posters_parser()
 
     with pytest.raises(SystemExit):
-        args = parser.parse_args(['posters', '--media-type', 'podcast'])
+        parser.parse_args(['posters', '--media-type', 'podcast'])
 
 
 # ============================================================================
@@ -338,12 +338,12 @@ def test_command_required():
 
     parser = ArgumentParser()
     subparsers = parser.add_subparsers(dest='command', required=True)
-    add_parser = subparsers.add_parser('add')
-    posters_parser = subparsers.add_parser('posters')
+    subparsers.add_parser('add')
+    subparsers.add_parser('posters')
 
     # Should fail without a command
     with pytest.raises(SystemExit):
-        args = parser.parse_args([])
+        parser.parse_args([])
 
 
 def test_command_routing():
@@ -371,9 +371,6 @@ def test_command_routing():
 # ============================================================================
 # Tests for optional backup behavior in command handlers
 # ============================================================================
-
-from argparse import Namespace
-from unittest.mock import Mock
 
 
 def test_add_command_skips_backup_when_not_requested(tmp_path, monkeypatch):

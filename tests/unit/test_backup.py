@@ -1,11 +1,8 @@
 """Unit tests for lib/backup.py"""
 
-import pytest
 import zipfile
-from pathlib import Path
 
 from lib.backup import create_vault_backup
-
 
 # ============================================================================
 # Tests for create_vault_backup

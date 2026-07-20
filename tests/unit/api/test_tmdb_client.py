@@ -1,12 +1,11 @@
 """Unit tests for lib/api/tmdb_client.py"""
 
+import json
+
 import pytest
 import responses
-import json
-from pathlib import Path
 
 from lib.api.tmdb_client import TMDBClient
-
 
 # ============================================================================
 # Test Fixtures
