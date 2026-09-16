@@ -859,3 +859,34 @@ def test_process_file_no_poster_available(poster_downloader_tmdb, tmp_path, caps
     assert result is False
     captured = capsys.readouterr()
     assert 'No poster available' in captured.out
+
+
+def test_get_media_type_lookups_collection_is_not_media(poster_downloader_tmdb, tmp_path):
+    """Test that word notes are invisible to the poster scan (they have no art)."""
+    file = tmp_path / 'serendipity.md'
+    file.write_text("""---
+collection: "[[Lookups]]"
+tags:
+  - noun
+---
+
+## Noun
+1. A fortunate discovery.
+""")
+
+    assert poster_downloader_tmdb.get_media_type(file) is None
+
+
+def test_find_media_files_skips_lookups(poster_downloader_tmdb, tmp_path):
+    """Test that a vault of word notes yields no poster work."""
+    (tmp_path / 'serendipity.md').write_text(
+        '---\ncollection: "[[Lookups]]"\n---\n\n## Noun\n1. A fortunate discovery.\n'
+    )
+    (tmp_path / 'Inception (2010).md').write_text(
+        '---\ncollection: "[[Movies]]"\n---\n\n## Links\nhttps://example.com\n'
+    )
+    poster_downloader_tmdb.vault_path = tmp_path
+
+    found = poster_downloader_tmdb.find_media_files()
+
+    assert [path.name for path, _ in found] == ['Inception (2010).md']

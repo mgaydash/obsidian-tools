@@ -7,6 +7,8 @@ import yaml
 from freezegun import freeze_time
 
 from lib.obsidian_utils import (
+    COLLECTION_BY_MEDIA_TYPE,
+    build_frontmatter,
     extract_title_and_year,
     extract_yaml_frontmatter,
     filter_results_by_year,
@@ -543,3 +545,47 @@ def test_load_genre_mappings_caches_result(tmp_path, monkeypatch):
     # Second call should return cached result
     result = obsidian_utils._load_genre_mappings()
     assert result == mappings
+
+
+# ============================================================================
+# Tests for lookup (word) disambiguation
+# ============================================================================
+
+def test_find_exact_title_match_lookup():
+    """Test that dictionary entries match on 'word'."""
+    results = [{'id': 'bass#0', 'word': 'bass'}, {'id': 'treble#0', 'word': 'treble'}]
+
+    assert find_exact_title_match(results, 'bass', 'lookup')['id'] == 'bass#0'
+
+
+def test_find_exact_title_match_lookup_case_insensitive():
+    """Test that a capitalized input still matches a lowercase headword."""
+    results = [{'id': 'serendipity#0', 'word': 'serendipity'}]
+
+    assert find_exact_title_match(results, 'Serendipity', 'lookup') is not None
+
+
+def test_find_exact_title_match_lookup_homographs_are_ambiguous():
+    """Test that several entries for one word prompt instead of auto-selecting."""
+    results = [{'id': 'bass#0', 'word': 'bass'}, {'id': 'bass#1', 'word': 'bass'}]
+
+    assert find_exact_title_match(results, 'bass', 'lookup') is None
+
+
+def test_filter_results_by_year_lookup_matches_nothing():
+    """Test that words have no year to filter on, so the caller keeps all results."""
+    results = [{'id': 'bass#0', 'word': 'bass'}]
+
+    assert filter_results_by_year(results, '2020', 'lookup') == []
+
+
+def test_collection_by_media_type_includes_lookup():
+    """Test that lookups map to the Lookups collection."""
+    assert COLLECTION_BY_MEDIA_TYPE['lookup'] == 'Lookups'
+
+
+def test_build_frontmatter_lookups_collection():
+    """Test frontmatter for a word note tagged with its part of speech."""
+    result = build_frontmatter('Lookups', ['noun', 'adjective'])
+
+    assert result == '---\ncollection: "[[Lookups]]"\ntags:\n  - noun\n  - adjective\n---'

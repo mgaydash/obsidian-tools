@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 
-Collection of CLI tools for managing and organizing media notes (movies, TV shows, games, albums, books) in Obsidian vaults. Fetches metadata from TMDB (movies/TV), IGDB (games), MusicBrainz (albums), and Google Books (books), creates formatted notes, downloads posters and cover art, and provides utilities for standardizing and enhancing your media library.
+Collection of CLI tools for managing and organizing media notes (movies, TV shows, games, albums, books) and word lookups in Obsidian vaults. Fetches metadata from TMDB (movies/TV), IGDB (games), MusicBrainz (albums), Google Books (books), and the Free Dictionary API (word definitions), creates formatted notes, downloads posters and cover art, and provides utilities for standardizing and enhancing your media library.
 
 ## Installation
 
@@ -23,7 +23,7 @@ config live in `pyproject.toml`.
 ## Setup
 
 Set environment variables for the APIs you'll use. You only need the keys for
-the media types you actually add — albums require no credentials:
+the media types you actually add — albums and lookups require no credentials:
 
 ```bash
 # For movies and TV shows
@@ -43,6 +43,7 @@ Where to get each:
 - **IGDB** (games): https://api-docs.igdb.com/#getting-started
 - **Google Books** (books): https://console.cloud.google.com/ — enable the "Books API", then create an API key
 - **MusicBrainz** (albums): no credentials required
+- **Free Dictionary** (lookups): no credentials required
 
 ### Configure a default vault (optional)
 
@@ -91,6 +92,9 @@ echo "The Dark Side of the Moon (1973)" | \
 echo -e "Dune\nThe Hobbit (1937)" | \
   obsidian-tools add book
 
+# Word lookups (no credentials required)
+obsidian-tools add lookup "serendipity" "ephemeral"
+
 # Interactive mode (paste titles, then Ctrl+D)
 obsidian-tools add movie
 
@@ -124,7 +128,7 @@ obsidian-tools posters --vault-path ~/vault -b backup.zip
 
 ## Features
 
-- **Multiple sources**: movies/TV (TMDB), games (IGDB), albums (MusicBrainz), books (Google Books)
+- **Multiple sources**: movies/TV (TMDB), games (IGDB), albums (MusicBrainz), books (Google Books), word definitions (Free Dictionary, with a Wiktionary fallback)
 - **Smart disambiguation**: include a year in parentheses (e.g., "Loot (2022)") for automatic matching
 - **Optional backups**: pass `-b/--backup <file.zip>` to zip the vault before making changes (off by default)
 - **Rich metadata**: source links, descriptions, and people (directors, cast, authors, artists) as wikilinks
@@ -166,6 +170,37 @@ Set on the desert planet Arrakis, Dune is the story of Paul Atreides.
 
 By [[Frank Herbert]].
 ```
+
+Lookups are filed as `Word.md` (words have no year) and carry the part of
+speech as a tag. Definitions come from the Free Dictionary API, falling back to
+Wiktionary when it is unreachable — both are Wiktionary text under CC BY-SA, so
+the note records the source and license:
+
+```markdown
+---
+collection: "[[Lookups]]"
+tags:
+  - noun
+---
+
+## Pronunciation
+/ˌsɛ.ɹən.ˈdɪ.pɪ.ti/
+
+## Noun
+1. A combination of events which have come together by chance to make a
+   surprisingly good or wonderful outcome.
+2. An unsought, unintended, but fortunate, discovery that happens by accident.
+   - *The discovery of penicillin was pure serendipity.*
+
+## Synonyms
+[[chance]], [[luck]]
+
+## Source
+https://en.wiktionary.org/wiki/serendipity
+CC BY-SA 3.0
+```
+
+Lookups have no cover art, so the `posters` command skips them.
 
 When a poster or cover is downloaded, it's saved next to the note and
 referenced in the frontmatter:

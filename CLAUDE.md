@@ -28,7 +28,7 @@ Update the relevant sections immediately after implementing changes. This ensure
 
 ## Project Overview
 
-**Obsidian Tools** - Collection of Python-based CLI tools for managing and organizing media notes (movies, TV shows, games, albums, books) in Obsidian vaults. Uses TMDB API for movies/TV, IGDB API for games, MusicBrainz for albums, and Google Books for books to fetch metadata, create notes, download cover art, and provide utilities for standardizing and enhancing your media library.
+**Obsidian Tools** - Collection of Python-based CLI tools for managing and organizing media notes (movies, TV shows, games, albums, books) and word lookups in Obsidian vaults. Uses TMDB API for movies/TV, IGDB API for games, MusicBrainz for albums, Google Books for books, and the Free Dictionary API for word definitions to fetch metadata, create notes, download cover art, and provide utilities for standardizing and enhancing your media library.
 
 ## Architecture
 
@@ -42,18 +42,19 @@ lib/                              # Shared library modules
 │   ├── tmdb_client.py           # TMDB implementation (movies/TV)
 │   ├── igdb_client.py           # IGDB implementation (games)
 │   ├── musicbrainz_client.py    # MusicBrainz implementation (albums)
-│   └── googlebooks_client.py    # Google Books implementation (books)
+│   ├── googlebooks_client.py    # Google Books implementation (books)
+│   └── dictionary_client.py     # Free Dictionary implementation (lookups)
 ├── backup.py                    # Vault backup utilities
 ├── config.py                    # Persistent user settings (JSON in XDG config dir)
 ├── obsidian_utils.py            # YAML, wikilinks, year extraction, disambiguation
 ├── poster_utils.py              # Shared poster download/resize utilities
 └── poster_downloader.py         # Standalone poster command implementation
 
-tests/                            # Test suite (400 tests)
+tests/                            # Test suite (453 tests)
 ├── conftest.py                  # Shared test fixtures
 ├── fixtures/                    # Test data (JSON, images, markdown)
-├── test_cli.py                  # CLI parsing + command handlers (56 tests)
-├── unit/                        # Unit tests (~4,900 lines, 333 tests)
+├── test_cli.py                  # CLI parsing + command handlers (58 tests)
+├── unit/                        # Unit tests (~5,500 lines, 384 tests)
 │   ├── api/                     # API client tests
 │   └── test_*.py                # Module tests
 └── integration/                 # Placeholder end-to-end tests (11, marked `integration`)
@@ -67,9 +68,9 @@ genre_mappings.yaml              # Genre → tag mappings (loaded relative to li
 
 **Factory Pattern (`lib/api/__init__.py`):**
 - `MediaAPIFactory.create_client(media_type)` routes to appropriate API client
-- Returns TMDB client for 'movie'/'tv', IGDB client for 'game', MusicBrainz for 'album', Google Books for 'book'
+- Returns TMDB client for 'movie'/'tv', IGDB client for 'game', MusicBrainz for 'album', Google Books for 'book', Free Dictionary for 'lookup'
 - Validates environment variables (TMDB_API_KEY, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, GOOGLE_BOOKS_API_KEY)
-- MusicBrainz requires no credentials; Google Books requires GOOGLE_BOOKS_API_KEY
+- MusicBrainz and Free Dictionary require no credentials; Google Books requires GOOGLE_BOOKS_API_KEY
 
 **Abstract Base Class (`lib/api/base.py`):**
 All API clients implement `MediaAPIClient` interface:
@@ -82,7 +83,7 @@ All API clients implement `MediaAPIClient` interface:
 
 **Shared Frontmatter Builder (`lib/obsidian_utils.py`):**
 - `build_frontmatter(collection, tags)` - Emits the `---` block: `collection: "[[<Collection>]]"` always, `tags:` only when there are facet tags. Used by all four API clients in `format_note_content()`.
-- `COLLECTION_BY_MEDIA_TYPE` - Maps media type → collection note name (`movie`→`Movies`, `tv`/`series`→`Series`, `game`→`Games`, `book`→`Books`, `album`→`Albums`).
+- `COLLECTION_BY_MEDIA_TYPE` - Maps media type → collection note name (`movie`→`Movies`, `tv`/`series`→`Series`, `game`→`Games`, `book`→`Books`, `album`→`Albums`, `lookup`→`Lookups`).
 - `translate_genre_tag(genre)` - Maps an API genre string to a vault tag via `genre_mappings.yaml`; clients run every genre/subject through it before passing tags to `build_frontmatter()`.
 
 **Shared Disambiguation Logic (`lib/obsidian_utils.py`):**
@@ -166,6 +167,9 @@ echo "Elden Ring" | python obsidian_tools.py add game --poster-width 200
 # Books (requires GOOGLE_BOOKS_API_KEY)
 echo -e "Dune\nThe Hobbit (1937)" | python obsidian_tools.py add book
 
+# Word lookups (no credentials needed)
+python obsidian_tools.py add lookup "serendipity" "ephemeral"
+
 # Back up the vault before adding (optional, off by default)
 echo "Inception" | python obsidian_tools.py add movie -b backup.zip
 ```
@@ -209,7 +213,7 @@ calls are mocked), so CI runs without credentials.
 
 ### Overview
 
-The project has comprehensive test coverage with **400 test cases** (56 CLI, 333 unit, 11 integration placeholders). All tests must pass before committing changes.
+The project has comprehensive test coverage with **453 test cases** (58 CLI, 384 unit, 11 integration placeholders). All tests must pass before committing changes.
 
 **Test Structure:**
 ```
@@ -230,7 +234,8 @@ tests/
 │       ├── test_tmdb_client.py    # TMDB client (movies/TV)
 │       ├── test_igdb_client.py    # IGDB client (games)
 │       ├── test_musicbrainz_client.py  # MusicBrainz client (albums)
-│       └── test_googlebooks_client.py  # Google Books client (books)
+│       ├── test_googlebooks_client.py  # Google Books client (books)
+│       └── test_dictionary_client.py   # Free Dictionary client (lookups)
 └── integration/                    # Placeholder end-to-end tests
     ├── test_add_command.py         # 'add' workflow (placeholders, @pytest.mark.integration)
     └── test_posters_command.py     # 'posters' workflow (placeholders)
@@ -349,12 +354,13 @@ branch coverage on), so the overall number includes the thinly-tested CLI module
 |--------|--------|--------|
 | Core utilities (obsidian_utils.py) | 95%+ | 88% |
 | API clients (api/*.py) | 95%+ | 95-98% ✓ |
+| Dictionary client (dictionary_client.py) | 95%+ | 97% ✓ |
 | Poster utilities (poster_utils.py) | 95%+ | 94% |
 | Poster downloader (poster_downloader.py) | 95%+ | 78% |
 | Config (config.py) | 100% | 100% ✓ |
 | Backup (backup.py) | 100% | 100% ✓ |
-| CLI (obsidian_tools.py) | 95%+ | 45% |
-| **Overall Project** | **95%** | **79%** |
+| CLI (obsidian_tools.py) | 95%+ | 49% |
+| **Overall Project** | **95%** | **82%** |
 
 ### Edge Cases That MUST Be Tested
 
@@ -366,6 +372,8 @@ branch coverage on), so the overall number includes the thinly-tested CLI module
 - **URL Encoding** - Handle %2C and other encoded characters
 - **YAML Frontmatter** - Incomplete (no closing ---), malformed, empty
 - **Filename Sanitization** - Colons, slashes, question marks, special characters
+- **Dictionary Fallback** - Primary 5xx/timeout falls back to Wiktionary; a 404 does not; both down raises
+- **Fixtures That Make Requests** - pytest resolves fixtures *before* `@responses.activate` takes effect, so a fixture calling `responses.add()` then hitting the client escapes the mock and makes a real network call. Build normalized data directly in the fixture instead (see `serendipity_details`)
 
 ### Test Maintenance
 
@@ -444,6 +452,18 @@ The check lives in `process_title()`, which only the `add` command calls, so
 - Filename format: `Author - Title (Year).md` (matches album convention, since duplicate book titles by different authors are common)
 - Collection: `collection: "[[Books]]"`
 
+**Free Dictionary (lookups):**
+- No credentials. Two sources serving the same Wiktionary content under CC BY-SA, so one attribution line covers either.
+- **Primary:** `https://api.dictionaryapi.dev/api/v2/entries/en/{word}` — a community proxy. Richer: IPA (`phonetic`, or the first non-empty `phonetics[].text`), audio, per-definition `example`, `synonyms`/`antonyms` at both definition and meaning level. It is a hobby service that hangs or 5xxes often enough to matter, hence the fallback.
+- **Fallback:** `https://en.wiktionary.org/api/rest_v1/page/definition/{word}` — Wikimedia's own endpoint. Reliable but thinner: definitions and part of speech only, keyed by language code (only `en` is used), with HTML markup in the definition text that `_strip_html()` removes.
+- **Circuit breaker:** the primary gets a shorter timeout (`PRIMARY_TIMEOUT = 8` vs `FALLBACK_TIMEOUT = 15`) because its time is pure dead wait. After one `RequestException` the client sets `self._primary_failed` and sends the rest of the batch straight to the fallback — otherwise a 20-word batch pays the timeout 20 times. A 404 is *not* a failure (the word is simply absent from Wiktionary, which both sources share), so it does not trip the breaker.
+- Lookup is an exact-word lookup, not a search: an unknown word yields `[]`, not near misses.
+- Entries are cached by a synthetic id (`word#index`) in `search()`, so `get_details()` needs no second request — the same pattern Google Books uses for `_earliest_years`. An uncached id re-fetches.
+- One entry per Wiktionary etymology, so homographs ("bass" the fish vs. the pitch) become separate selectable entries and trigger `prompt_disambiguation()`. The fallback cannot split homographs and always returns a single entry.
+- Filename format: `Word.md` — words have no year, so the `(Year)` the media clients append would be meaningless.
+- Collection: `collection: "[[Lookups]]"`; part of speech becomes the facet tag (`noun`, `phrasal-verb`). These are **not** run through `translate_genre_tag()` — a part of speech is not a genre.
+- `get_poster_url()` always returns None.
+
 ### Media Type Detection
 
 Media type comes from the note's `collection` property, not from a tag:
@@ -455,6 +475,9 @@ Media type comes from the note's `collection` property, not from a tag:
 | `[[Games]]` | game |
 | `[[Albums]]` | album |
 | `[[Books]]` | book |
+
+`[[Lookups]]` is deliberately absent from `MEDIA_TYPE_BY_COLLECTION`: word notes
+have no cover art, so the `posters` command must not scan them.
 
 `collection` is the note's identity — exactly one, always — so it, not a tag,
 is what says which API can describe a note. Matching is case-insensitive and
@@ -531,6 +554,8 @@ Persistent settings live in `lib/config.py`, stored as JSON at
 - Setup: https://console.cloud.google.com/ (enable "Books API", create an API key). The free tier allows 1,000 queries/day; the keyless/anonymous quota is a shared global bucket and is unreliable (returns HTTP 429 when exhausted), so a key is required.
 
 **Albums (MusicBrainz):** No credentials required.
+
+**Lookups (Free Dictionary / Wiktionary):** No credentials required.
 
 ## Common Patterns
 

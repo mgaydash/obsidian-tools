@@ -134,7 +134,7 @@ def process_title(
         client: MediaAPIClient instance
         vault_path: Path to Obsidian vault
         title_input: Title to search for (may include year in parentheses)
-        media_type: Type of media ('movie', 'tv', 'game', 'album', or 'book')
+        media_type: Type of media ('movie', 'tv', 'game', 'album', 'book', or 'lookup')
         poster_width: Width to resize posters to (default: 200px)
 
     Returns:
@@ -246,7 +246,8 @@ def process_title(
                 print("⚠️  Failed to update frontmatter with poster")
         else:
             print("⚠️  Failed to download poster")
-    else:
+    elif media_type != 'lookup':
+        # Word lookups never have cover art, so silence is the right report
         print(f"⚠️  No poster available for this {media_type}")
 
     return True
@@ -279,16 +280,20 @@ def handle_add_command(args):
         print("  No credentials needed!")
         print("\nFor Google Books (books):")
         print("  export GOOGLE_BOOKS_API_KEY='your_api_key_here'")
+        print("\nFor Free Dictionary (lookups):")
+        print("  No credentials needed!")
         sys.exit(1)
 
     # Print header
-    media_emoji = {'movie': '🎬', 'tv': '📺', 'game': '🎮', 'album': '🎵', 'book': '📚'}
+    media_emoji = {'movie': '🎬', 'tv': '📺', 'game': '🎮', 'album': '🎵', 'book': '📚',
+                   'lookup': '📖'}
     print(f"{media_emoji.get(args.media_type, '📝')} Obsidian Media Note Manager - Add {args.media_type.title()}s")
     print("=" * 80)
     print(f"Vault: {vault_path}")
     print(f"Backup: {args.backup_filename if args.backup_filename else 'disabled'}")
     print(f"Media Type: {args.media_type}")
-    print(f"Poster width: {args.poster_width}px")
+    if args.media_type != 'lookup':
+        print(f"Poster width: {args.poster_width}px")
     print("=" * 80)
 
     # Create backup (only when requested via -b/--backup)
@@ -328,6 +333,10 @@ def handle_add_command(args):
         # Rate limiting for MusicBrainz API (max 1 request/second)
         if args.media_type == 'album':
             time.sleep(1.1)
+        # The dictionary API is a free community service with no published
+        # limit; pace batches rather than hammering it
+        elif args.media_type == 'lookup':
+            time.sleep(0.5)
 
     # Summary
     print("\n" + "=" * 80)
@@ -495,6 +504,9 @@ Examples:
   # Add books
   echo -e "Dune\nThe Hobbit (1937)" | python obsidian_tools.py add book
 
+  # Look up word definitions (no credentials needed)
+  python obsidian_tools.py add lookup "serendipity" "ephemeral"
+
   # Download posters for existing notes (all media types)
   python obsidian_tools.py posters
 
@@ -510,6 +522,7 @@ Environment Variables:
   IGDB_CLIENT_SECRET    Required for games (Twitch application client secret)
   GOOGLE_BOOKS_API_KEY  Required for books (Google Cloud API key)
   MusicBrainz (albums)  No credentials needed!
+  Dictionary (lookups)  No credentials needed!
         """
     )
 
@@ -523,14 +536,15 @@ Environment Variables:
     )
     add_parser.add_argument(
         'media_type',
-        choices=['movie', 'tv', 'game', 'album', 'book'],
+        choices=['movie', 'tv', 'game', 'album', 'book', 'lookup'],
         help='Type of media to add'
     )
     add_parser.add_argument(
         'titles',
         nargs='*',
         metavar='TITLE',
-        help='One or more titles to add (e.g., "Dune" "The Matrix (1999)"). '
+        help='One or more titles to add (e.g., "Dune" "The Matrix (1999)"), '
+             'or words to define when media type is "lookup". '
              'If omitted, titles are read from stdin, one per line.'
     )
     add_parser.add_argument(

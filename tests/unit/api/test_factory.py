@@ -4,7 +4,14 @@
 import pytest
 import responses
 
-from lib.api import GoogleBooksClient, IGDBClient, MediaAPIFactory, MusicBrainzClient, TMDBClient
+from lib.api import (
+    DictionaryClient,
+    GoogleBooksClient,
+    IGDBClient,
+    MediaAPIFactory,
+    MusicBrainzClient,
+    TMDBClient,
+)
 
 # ============================================================================
 # Tests for MediaAPIFactory.create_client
@@ -281,3 +288,18 @@ def test_create_same_type_multiple_times(set_mock_env):
     # But same type and properties
     assert type(client1) is type(client2)
     assert client1.media_type == client2.media_type
+
+
+def test_create_client_lookup():
+    """Test creating Dictionary client for word lookups (no credentials needed)."""
+    client = MediaAPIFactory.create_client('lookup')
+
+    assert isinstance(client, DictionaryClient)
+
+
+def test_create_client_lookup_needs_no_env(monkeypatch):
+    """Test that lookups work with every API credential unset."""
+    for var in ['TMDB_API_KEY', 'IGDB_CLIENT_ID', 'IGDB_CLIENT_SECRET', 'GOOGLE_BOOKS_API_KEY']:
+        monkeypatch.delenv(var, raising=False)
+
+    assert isinstance(MediaAPIFactory.create_client('lookup'), DictionaryClient)

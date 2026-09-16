@@ -1,5 +1,6 @@
 """Unit tests for obsidian_tools.py CLI"""
 
+import sys
 from argparse import Namespace
 from io import StringIO
 from pathlib import Path
@@ -108,7 +109,9 @@ def build_add_parser():
     subparsers = parser.add_subparsers(dest='command', required=True)
 
     add_parser = subparsers.add_parser('add')
-    add_parser.add_argument('media_type', choices=['movie', 'tv', 'game', 'album', 'book'])
+    add_parser.add_argument(
+        'media_type', choices=['movie', 'tv', 'game', 'album', 'book', 'lookup']
+    )
     add_parser.add_argument('titles', nargs='*')
     add_parser.add_argument('--vault-path', dest='vault_path', default=None)
     add_parser.add_argument('-b', '--backup', dest='backup_filename', default=None)
@@ -313,7 +316,7 @@ def test_add_command_media_type_choices():
     parser = build_add_parser()
 
     # Test all valid choices (media type is the positional argument)
-    for media_type in ['movie', 'tv', 'game', 'album', 'book']:
+    for media_type in ['movie', 'tv', 'game', 'album', 'book', 'lookup']:
         args = parser.parse_args(['add', media_type])
         assert args.media_type == media_type
 
@@ -659,3 +662,34 @@ def test_add_command_uses_title_arguments(tmp_path, monkeypatch):
     # process_title(client, vault_path, title_input, media_type, poster_width)
     processed_titles = [call.args[2] for call in process.call_args_list]
     assert processed_titles == ['Dune', 'The Hobbit']  # de-duplicated, order preserved
+
+
+# ============================================================================
+# Tests for the real parser in main() (the replicas above can drift from it)
+# ============================================================================
+
+def test_real_parser_accepts_add_lookup(monkeypatch):
+    """Test that the shipped CLI accepts 'add lookup'."""
+    import obsidian_tools
+
+    monkeypatch.setattr(sys, 'argv', ['obsidian_tools.py', 'add', 'lookup', '--help'])
+
+    with pytest.raises(SystemExit) as exc_info:
+        obsidian_tools.main()
+
+    # --help exits 0; an unknown media type would exit 2
+    assert exc_info.value.code == 0
+
+
+def test_real_parser_rejects_lookup_posters_filter(monkeypatch):
+    """Test that 'posters --media-type lookup' is refused: word notes have no art."""
+    import obsidian_tools
+
+    monkeypatch.setattr(
+        sys, 'argv', ['obsidian_tools.py', 'posters', '--media-type', 'lookup', '--help']
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        obsidian_tools.main()
+
+    assert exc_info.value.code == 2

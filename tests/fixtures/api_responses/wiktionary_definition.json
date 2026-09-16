@@ -1,0 +1,24 @@
+{
+  "en": [
+    {
+      "partOfSpeech": "Noun",
+      "language": "English",
+      "definitions": [
+        {
+          "definition": "The <a rel=\"mw:WikiLink\" href=\"/wiki/phenomenon\" title=\"phenomenon\">phenomenon</a> of finding valuable things not sought for.",
+          "examples": ["A fortunate stroke of <b>serendipity</b>."]
+        },
+        {
+          "definition": "An unsought, unintended or unexpected, but fortunate, discovery."
+        }
+      ]
+    }
+  ],
+  "fr": [
+    {
+      "partOfSpeech": "Noun",
+      "language": "French",
+      "definitions": [{"definition": "sérendipité"}]
+    }
+  ]
+}

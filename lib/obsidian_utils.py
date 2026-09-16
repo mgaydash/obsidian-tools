@@ -31,6 +31,7 @@ COLLECTION_BY_MEDIA_TYPE = {
     'game': 'Games',
     'book': 'Books',
     'album': 'Albums',
+    'lookup': 'Lookups',
 }
 
 
@@ -137,6 +138,11 @@ def filter_results_by_year(results: List[Dict], year: str, media_type: str) -> L
 
     Returns:
         Filtered list of results matching the year
+
+    Note:
+        Word lookups have no year, so 'lookup' never matches here. A year typed
+        alongside a word yields an empty filter, and the caller falls back to
+        the unfiltered results.
     """
     filtered = []
     for result in results:
@@ -199,6 +205,10 @@ def find_exact_title_match(results: List[Dict], title: str, media_type: str) -> 
         elif media_type == 'book':
             # Google Books standardized result uses 'title'
             result_title = result.get('title')
+        elif media_type == 'lookup':
+            # Free Dictionary entries use 'word'. Homographs all carry the same
+            # word, so several matches means an ambiguous entry -> prompt
+            result_title = result.get('word')
 
         if result_title and result_title.lower().strip() == title_lower:
             exact_matches.append(result)

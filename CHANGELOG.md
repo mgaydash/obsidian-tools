@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `add lookup <word>` creates dictionary notes in a `[[Lookups]]` collection: pronunciation, definitions grouped by part of speech, examples, and synonyms/antonyms as wikilinks. No credentials required.
+- `lib/api/dictionary_client.py` — Free Dictionary API client (`api.dictionaryapi.dev`) with an automatic fallback to Wikimedia's Wiktionary REST endpoint when the primary is unreachable. Both serve Wiktionary text under CC BY-SA, and notes record the source URL and license.
+- Part of speech becomes the note's facet tag (`noun`, `phrasal-verb`); homographs become separate entries and prompt for disambiguation.
+
 ### Changed
 - **Breaking:** new notes declare a collection (`collection: "[[Movies]]"`) instead of carrying a media type tag. `tags` now hold only facets — genre, play-mode, and so on — and the key is omitted entirely when a note has none.
 - **Breaking:** media type is read from `collection` rather than from `movie`/`series`/`game`/`album`/`book` tags or `#hashtag` text. Matching is case-insensitive and tolerates a wikilink alias (`[[Movies|Films]]`) or folder prefix.

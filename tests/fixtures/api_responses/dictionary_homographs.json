@@ -1,0 +1,44 @@
+[
+  {
+    "word": "bass",
+    "phonetic": "/beɪs/",
+    "phonetics": [{"text": "/beɪs/"}],
+    "meanings": [
+      {
+        "partOfSpeech": "noun",
+        "definitions": [
+          {"definition": "A low spectrum of sound tones.", "synonyms": [], "antonyms": ["treble"]}
+        ],
+        "synonyms": [],
+        "antonyms": []
+      },
+      {
+        "partOfSpeech": "adjective",
+        "definitions": [
+          {"definition": "Of sound, a voice or an instrument, low in pitch or frequency.", "synonyms": [], "antonyms": []}
+        ],
+        "synonyms": [],
+        "antonyms": []
+      }
+    ],
+    "license": {"name": "CC BY-SA 3.0", "url": "https://creativecommons.org/licenses/by-sa/3.0"},
+    "sourceUrls": ["https://en.wiktionary.org/wiki/bass"]
+  },
+  {
+    "word": "bass",
+    "phonetic": "/bæs/",
+    "phonetics": [{"text": "/bæs/"}],
+    "meanings": [
+      {
+        "partOfSpeech": "noun",
+        "definitions": [
+          {"definition": "The perch; any of various marine and freshwater fish.", "synonyms": [], "antonyms": []}
+        ],
+        "synonyms": [],
+        "antonyms": []
+      }
+    ],
+    "license": {"name": "CC BY-SA 3.0", "url": "https://creativecommons.org/licenses/by-sa/3.0"},
+    "sourceUrls": ["https://en.wiktionary.org/wiki/bass"]
+  }
+]

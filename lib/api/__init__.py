@@ -3,6 +3,7 @@
 import os
 
 from .base import MediaAPIClient
+from .dictionary_client import DictionaryClient
 from .googlebooks_client import GoogleBooksClient
 from .igdb_client import IGDBClient
 from .musicbrainz_client import MusicBrainzClient
@@ -18,7 +19,7 @@ class MediaAPIFactory:
         Create an API client based on media type.
 
         Args:
-            media_type: 'movie', 'tv', 'game', 'album', or 'book'
+            media_type: 'movie', 'tv', 'game', 'album', 'book', or 'lookup'
 
         Returns:
             Appropriate MediaAPIClient instance
@@ -42,6 +43,9 @@ class MediaAPIFactory:
         elif media_type == 'album':
             return MusicBrainzClient()
 
+        elif media_type == 'lookup':
+            return DictionaryClient()
+
         elif media_type == 'book':
             api_key = os.environ.get('GOOGLE_BOOKS_API_KEY')
             if not api_key:
@@ -49,7 +53,10 @@ class MediaAPIFactory:
             return GoogleBooksClient(api_key)
 
         else:
-            raise ValueError(f"Invalid media type: {media_type}. Must be 'movie', 'tv', 'game', 'album', or 'book'")
+            raise ValueError(
+                f"Invalid media type: {media_type}. "
+                "Must be 'movie', 'tv', 'game', 'album', 'book', or 'lookup'"
+            )
 
 
 __all__ = [
@@ -59,4 +66,5 @@ __all__ = [
     'IGDBClient',
     'MusicBrainzClient',
     'GoogleBooksClient',
+    'DictionaryClient',
 ]
