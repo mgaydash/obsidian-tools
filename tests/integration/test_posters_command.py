@@ -8,7 +8,7 @@ import pytest
 
 # Note: Full integration tests would require extensive mocking of:
 # - Vault scanning
-# - Tag detection from YAML and hashtags
+# - Collection detection from YAML frontmatter
 # - API searches and responses
 # - Poster downloads
 # - Frontmatter updates
@@ -20,7 +20,7 @@ def test_posters_scan_vault_placeholder(tmp_path):
 
     Would test:
     1. Creating vault with various media notes
-    2. Scanning for files with movie/series/game/album tags
+    2. Scanning for notes in the Movies/Series/Games/Albums/Books collections
     3. Filtering files that already have posters
     4. Processing each file
     """

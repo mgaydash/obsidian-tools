@@ -49,13 +49,14 @@ lib/                              # Shared library modules
 ├── poster_utils.py              # Shared poster download/resize utilities
 └── poster_downloader.py         # Standalone poster command implementation
 
-tests/                            # Test suite (398 tests)
+tests/                            # Test suite (400 tests)
 ├── conftest.py                  # Shared test fixtures
 ├── fixtures/                    # Test data (JSON, images, markdown)
-├── unit/                        # Unit tests (~3,100 lines)
+├── test_cli.py                  # CLI parsing + command handlers (56 tests)
+├── unit/                        # Unit tests (~4,900 lines, 333 tests)
 │   ├── api/                     # API client tests
 │   └── test_*.py                # Module tests
-└── integration/                 # Integration tests (future)
+└── integration/                 # Placeholder end-to-end tests (11, marked `integration`)
 
 obsidian_tools.py                # Main CLI with subcommands (entry point: obsidian_tools:main)
 pyproject.toml                   # Deps, build config, pytest/coverage config
@@ -79,10 +80,17 @@ All API clients implement `MediaAPIClient` interface:
 - `get_filename(details)` - Generate "Title (Year).md" filename
 - `get_poster_url(details)` - Get full poster URL from details (returns None if no poster available)
 
+**Shared Frontmatter Builder (`lib/obsidian_utils.py`):**
+- `build_frontmatter(collection, tags)` - Emits the `---` block: `collection: "[[<Collection>]]"` always, `tags:` only when there are facet tags. Used by all four API clients in `format_note_content()`.
+- `COLLECTION_BY_MEDIA_TYPE` - Maps media type → collection note name (`movie`→`Movies`, `tv`/`series`→`Series`, `game`→`Games`, `book`→`Books`, `album`→`Albums`).
+- `translate_genre_tag(genre)` - Maps an API genre string to a vault tag via `genre_mappings.yaml`; clients run every genre/subject through it before passing tags to `build_frontmatter()`.
+
 **Shared Disambiguation Logic (`lib/obsidian_utils.py`):**
 - `extract_title_and_year(input)` - Extracts year from "Title (Year)" format
 - `filter_results_by_year(results, year, media_type)` - Filters API results by year
 - `find_exact_title_match(results, title, media_type)` - Auto-selects exact matches
+- `is_game_unreleased(game_result)` - True when an IGDB result has no `first_release_date` (release TBD)
+- `prompt_unreleased_confirmation(game_title)` - Asks y/n before adding such a game; anything but `y` skips it
 
 This shared logic ensures consistent behavior across both 'add' and 'posters' commands.
 
@@ -201,7 +209,7 @@ calls are mocked), so CI runs without credentials.
 
 ### Overview
 
-The project has comprehensive test coverage with **398 test cases**. All tests must pass before committing changes.
+The project has comprehensive test coverage with **400 test cases** (56 CLI, 333 unit, 11 integration placeholders). All tests must pass before committing changes.
 
 **Test Structure:**
 ```
@@ -223,7 +231,9 @@ tests/
 │       ├── test_igdb_client.py    # IGDB client (games)
 │       ├── test_musicbrainz_client.py  # MusicBrainz client (albums)
 │       └── test_googlebooks_client.py  # Google Books client (books)
-└── integration/                    # Integration tests (future)
+└── integration/                    # Placeholder end-to-end tests
+    ├── test_add_command.py         # 'add' workflow (placeholders, @pytest.mark.integration)
+    └── test_posters_command.py     # 'posters' workflow (placeholders)
 ```
 
 ### Running Tests
@@ -332,13 +342,19 @@ def test_extract_title(input, expected):
 
 ### Test Coverage Requirements
 
+Coverage runs over `lib/` **and** `obsidian_tools.py` (`--cov=lib --cov=obsidian_tools`,
+branch coverage on), so the overall number includes the thinly-tested CLI module.
+
 | Module | Target | Status |
 |--------|--------|--------|
-| Core utilities (obsidian_utils.py) | 95%+ | 87% |
-| API clients (api/*.py) | 95%+ | 95-100% ✓ |
+| Core utilities (obsidian_utils.py) | 95%+ | 88% |
+| API clients (api/*.py) | 95%+ | 95-98% ✓ |
 | Poster utilities (poster_utils.py) | 95%+ | 94% |
+| Poster downloader (poster_downloader.py) | 95%+ | 78% |
+| Config (config.py) | 100% | 100% ✓ |
 | Backup (backup.py) | 100% | 100% ✓ |
-| **Overall Project** | **95%** | **88%** |
+| CLI (obsidian_tools.py) | 95%+ | 45% |
+| **Overall Project** | **95%** | **79%** |
 
 ### Edge Cases That MUST Be Tested
 
@@ -393,6 +409,14 @@ Both 'add' and 'posters' commands use intelligent disambiguation:
 7. Else if single result → auto-select
 
 **Example:** "Loot (2022)" automatically selects "Loot" over "Loot - Blood Treasure" due to exact title match.
+
+**Unreleased games:** on the auto-select path (step 5) only, `add game` checks
+`is_game_unreleased(match)` — an IGDB result with no `first_release_date` — and
+calls `prompt_unreleased_confirmation()` before proceeding; declining skips the
+title. The guard is deliberately not on the disambiguation or single-result
+paths: picking a TBD game from a numbered list is already an explicit choice.
+The check lives in `process_title()`, which only the `add` command calls, so
+`posters` never prompts.
 
 ### API Response Formats
 
@@ -453,13 +477,13 @@ now carry only facets (genre, play-mode, and so on).
 7. Embed poster at beginning of content: `![[filename.jpg]]` with proper spacing
 
 **Standalone 'posters' command (retroactive):**
-1. Scan vault for files tagged 'movie', 'series', or 'game' without 'poster' property
-2. Apply optional `--media-type` filter (movie, tv, game, or all)
+1. Scan vault for notes whose `collection` is a media collection (see Media Type Detection) and that have no `poster` property
+2. Apply optional `--media-type` filter (movie, tv, game, album, book, or all)
 3. Extract title and year from filename
-4. Search appropriate API (TMDB for movie/tv, IGDB for games)
+4. Search appropriate API (TMDB for movie/tv, IGDB for games, MusicBrainz for albums, Google Books for books)
 5. Follow same download/resize/save workflow as above
 
-The 'posters' command supports `--media-type` filter to selectively process files. Default is 'all', which processes all media types but skips files that already have posters.
+The 'posters' command supports `--media-type` filter to selectively process files (`all`, `movie`, `tv`, `game`, `album`, `book`). Default is 'all', which processes all media types but skips files that already have posters. `PosterDownloader.get_media_type(file_path)` is what maps a note to its media type; `MEDIA_TYPE_BY_COLLECTION` in `lib/poster_downloader.py` holds the reverse of `COLLECTION_BY_MEDIA_TYPE`.
 
 Both workflows use shared utilities from `lib/poster_utils.py`.
 

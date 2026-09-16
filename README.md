@@ -128,7 +128,7 @@ obsidian-tools posters --vault-path ~/vault -b backup.zip
 - **Smart disambiguation**: include a year in parentheses (e.g., "Loot (2022)") for automatic matching
 - **Optional backups**: pass `-b/--backup <file.zip>` to zip the vault before making changes (off by default)
 - **Rich metadata**: source links, descriptions, and people (directors, cast, authors, artists) as wikilinks
-- **Tag-based**: works with files tagged `movie`, `series`, `game`, `album`, or `book`
+- **Collection-based**: works with notes whose `collection` is `[[Movies]]`, `[[Series]]`, `[[Games]]`, `[[Albums]]`, or `[[Books]]`
 
 ## What It Creates
 
