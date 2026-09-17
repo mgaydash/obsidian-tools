@@ -7,18 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-09-16
+
 ### Added
 - `add lookup <word>` creates dictionary notes in a `[[Lookups]]` collection: pronunciation, definitions grouped by part of speech, examples, and synonyms/antonyms as wikilinks. No credentials required.
 - `lib/api/dictionary_client.py` — Free Dictionary API client (`api.dictionaryapi.dev`) with an automatic fallback to Wikimedia's Wiktionary REST endpoint when the primary is unreachable. Both serve Wiktionary text under CC BY-SA, and notes record the source URL and license.
 - Part of speech becomes the note's facet tag (`noun`, `phrasal-verb`); homographs become separate entries and prompt for disambiguation.
+- `build_frontmatter()` in `lib/obsidian_utils.py`, shared by all the API clients.
 
 ### Changed
 - **Breaking:** new notes declare a collection (`collection: "[[Movies]]"`) instead of carrying a media type tag. `tags` now hold only facets — genre, play-mode, and so on — and the key is omitted entirely when a note has none.
 - **Breaking:** media type is read from `collection` rather than from `movie`/`series`/`game`/`album`/`book` tags or `#hashtag` text. Matching is case-insensitive and tolerates a wikilink alias (`[[Movies|Films]]`) or folder prefix.
 - `PosterDownloader.get_media_type_from_tags()` renamed to `get_media_type()`, since it no longer reads tags.
-
-### Added
-- `build_frontmatter()` in `lib/obsidian_utils.py`, shared by all four API clients.
 
 ### Fixed
 - Poster downloading silently found no files in a vault migrated to `collection`: detection still required the retired type tags, so every note returned no media type.
@@ -72,7 +72,8 @@ Initial release.
 - `configure` command to persist a default vault path.
 - Optional vault backup via `-b/--backup`.
 
-[Unreleased]: https://github.com/mgaydash/obsidian-tools/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/mgaydash/obsidian-tools/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/mgaydash/obsidian-tools/compare/v1.3.0...v2.0.0
 [1.3.0]: https://github.com/mgaydash/obsidian-tools/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/mgaydash/obsidian-tools/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/mgaydash/obsidian-tools/compare/v1.1.0...v1.2.0
